@@ -55,7 +55,10 @@ dos_echo (char **argv, int argc)
 
 	for (i = 0; i < argc; i++) {
 		arglen = strlen(argv[i]);
+
 		write(STDOUT_FILENO, argv[i], arglen);
+		putchar(' ');
+		fflush(stdout);
 	}
 
 	puts("\n");
