@@ -51,16 +51,14 @@ main ()
 
 	
 	for (;;) {
-		write(STDOUT_FILENO, "C:>", 3);
+		write(STDOUT_FILENO, "\nC:>", 4);
 		bytes_read = read(STDIN_FILENO, buffer, bytes);
 		if (bytes_read < 0) {
 			perror("read");
 			abort();
 		}
-		if (bytes_read < 2) {
-			putchar('\n');
+		if (bytes_read < 2)
 			continue;
-		}
 		if (bytes_read >= bytes) {
 			bytes = bytes_read + 1;
 			tmpbuf = realloc(buffer, bytes * sizeof(char));

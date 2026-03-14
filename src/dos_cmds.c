@@ -38,14 +38,12 @@ dos_help (char **argv, int argc)
 		puts("<PAUSE> Wait until keystroke\n"
 		     "<TYPE > Display the contents of a text file\n"
 		     "<CLS  > Clear the screen");
-	putchar('\n');
 }
 
 void
 dos_ver ()
 {
 	puts("DOS version " DOS_VERSION);
-	putchar('\n');
 }
 
 void
@@ -61,7 +59,7 @@ dos_echo (char **argv, int argc)
 		fflush(stdout);
 	}
 
-	puts("\n");
+	putchar('\n');
 }
 
 //void
@@ -102,7 +100,6 @@ dos_type (char **argv, int argc)
 		
 		close(fd);
 	}
-	putchar('\n');
 }
 
 void
