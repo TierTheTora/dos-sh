@@ -17,6 +17,8 @@ void print_box
 	(const char *msg);
 void dosify_dir
 	(char *path);
+void undosify_dir
+	(char *path);
 void print_path
 	();
 

@@ -100,6 +100,17 @@ dosify_dir (char *path)
 }
 
 void
+undosify_dir (char *path)
+{
+	int i;
+
+	for (i = 0; path[i] != 0; i++) {
+		if (path[i] == '\\')
+			path[i] = '/';
+	}
+}
+
+void
 print_path ()
 {
 	char path[PATH_MAX + 1];

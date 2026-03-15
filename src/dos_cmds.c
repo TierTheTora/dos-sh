@@ -44,21 +44,20 @@ get_longest_name (char *path)
 
 int
 print_ent_info (char *file, char *d_name, 
-                 int *dirs, int *files, int *bytes,
-		 int maxlen, bool b, bool w)
+                 int *dirs, int *files, size_t *bytes,
+		 int maxlen, int *linesz, bool b, bool w)
 {
 	time_t mod_time;
 	struct tm *timeinfo;
 	struct stat statbuf;
 	struct winsize ws;
 	char timebuf[81];
-	int linesz;
 
-	linesz = 0;
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
 
-	if (stat(file, &statbuf) == -1) {
-		perror("stat");
+	if (lstat(file, &statbuf) == -1) {
+		puts(file);
+		perror("lstat");
 		return -1;
 	}
 
@@ -77,9 +76,9 @@ print_ent_info (char *file, char *d_name,
 	if (b)
 		puts(d_name);
 	else if (w) {
-		linesz += maxlen;
-		if (linesz > ws.ws_col) {
-			linesz = 0;
+		*linesz += maxlen;
+		if (*linesz > ws.ws_col) {
+			*linesz = 0;
 			putchar('\n');
 			fflush(stdout);
 		}
@@ -88,9 +87,9 @@ print_ent_info (char *file, char *d_name,
 	else {
 		printf("%-*s", maxlen, d_name);
 		printf("    %s     ",
-		       S_ISDIR(statbuf.st_mode) ?
-		         "<DIR>" :
-			 "     "
+			S_ISDIR(statbuf.st_mode) ?
+			"<DIR>" :
+			"     "
 		);
 		printf("% 8ld %s\n", statbuf.st_size,
 		       timebuf);
@@ -103,8 +102,9 @@ void
 dos_dir (char **argv, int argc)
 {
 	/* nsa = non-switch args */
-	int i, maxlen, dirs, files, bytes, linesz, nsa, farg, filesz;
-	char path[PATH_MAX + 1], dpath[PATH_MAX + 1], timebuf[81],
+	int i, maxlen, dirs, files, linesz, nsa, farg, filesz;
+	size_t bytes;
+	char path[PATH_MAX + 1], timebuf[81],
 	     *file;
 	DIR *dir;
 	time_t mod_time;
@@ -152,6 +152,20 @@ dos_dir (char **argv, int argc)
 			return;
 		}
 		else {
+			undosify_dir(argv[i]);
+
+			filesz += strlen(argv[i]);
+			filesz *= sizeof(char);
+			file = realloc(file, filesz);
+
+			if (!file) {
+				perror("realloc");
+				return;
+			}
+
+			memset(file, 0, filesz);
+			strcpy(file, path);
+			strcat(file, "/");
 			strcat(file, argv[i]);
 			farg = i;
 			nsa++;
@@ -159,15 +173,16 @@ dos_dir (char **argv, int argc)
 	}
 
 	if (!b) {
-		strncpy(dpath, path, sizeof(path));
+		char dpath[filesz];
+		strcpy(dpath, file);
 		dosify_dir(dpath);
 		printf("Directory of %s.\n", dpath);
 		maxlen = get_longest_name(path);
 	}
 
 	if (nsa != 0) {
-		if (stat(file, &statbuf) == -1) {
-			perror("stat");
+		if (lstat(file, &statbuf) == -1) {
+			perror("lstat");
 			return;
 		}
 
@@ -209,7 +224,7 @@ dos_dir (char **argv, int argc)
 
 					if (print_ent_info(file, ent->d_name,
 						&dirs, &files, &bytes,
-						maxlen, b, w) != 0) {
+						maxlen, &linesz, b, w) != 0) {
 						return;
 					}
 				}
@@ -262,7 +277,7 @@ dos_dir (char **argv, int argc)
 
 			if (print_ent_info(file, ent->d_name,
 			               &dirs, &files, &bytes,
-			               maxlen, b, w) != 0) {
+			               maxlen, &linesz, b, w) != 0) {
 				return;
 			}
 		}
@@ -276,7 +291,7 @@ dos_dir (char **argv, int argc)
 	free(file);
 	if (!b) {
 		print_info:
-		printf("\n% 8d File(s)  % 21d Byte(s).\n", files, bytes);
+		printf("\n% 8d File(s)  % 21ld Byte(s).\n", files, bytes);
 		printf("% 8d Dir(s).\n", dirs);
 	}
 }
@@ -294,6 +309,7 @@ dos_cd (char **argv, int argc)
 		return;
 	}
 
+	undosify_dir(argv[argc - 1]);
 	chdir(argv[argc - 1]);
 }
 
@@ -315,6 +331,8 @@ dos_del (char **argv, int argc)
 		return;
 	}
 	for (i = 0; i < argc; i++) {
+		undosify_dir(argv[i]);
+		
 		char path[PATH_MAX + strlen(argv[i]) + 1];
 
 		if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -326,11 +344,11 @@ dos_del (char **argv, int argc)
 		strcat(path, "/");
 		strcat(path, argv[i]);
 
-		if (stat(path, &statbuf) == -1) {
+		if (lstat(path, &statbuf) == -1) {
 			if (errno == ENOENT)
 				puts("Illegal Path.");
 			else {
-				perror("stat");
+				perror("lstat");
 			}
 			return;
 		}
@@ -420,6 +438,8 @@ dos_mkdir (char **argv, int argc)
 		return;
 	}
 
+	undosify_dir(argv[0]);
+
 	char path[PATH_MAX + strlen(argv[0]) + 1];
 
 	strcpy(path, cwd);
@@ -456,6 +476,8 @@ dos_rmdir (char **argv, int argc)
 		return;
 	}
 	for (i = 0; i < argc; i++) {
+		undosify_dir(argv[i]);
+
 		char path[PATH_MAX + strlen(argv[i]) + 1];
 
 		if (getcwd(cwd, sizeof(cwd)) == NULL) {
@@ -467,11 +489,11 @@ dos_rmdir (char **argv, int argc)
 		strcat(path, "/");
 		strcat(path, argv[i]);
 
-		if (stat(path, &statbuf) == -1) {
+		if (lstat(path, &statbuf) == -1) {
 			if (errno == ENOENT)
 				puts("Illegal Path.");
 			else {
-				perror("stat");
+				perror("lstat");
 			}
 			return;
 		}
@@ -500,6 +522,8 @@ dos_touch (char **argv, int argc)
 		return;
 	}
 
+	undosify_dir(argv[0]);
+
 	char path[PATH_MAX + strlen(argv[0]) + 1];
 
 	strcpy(path, cwd);
@@ -525,6 +549,8 @@ dos_type (char **argv, int argc)
 		return;
 	}
 	for (i = 0; i < argc; i++) {
+		undosify_dir(argv[i]);
+
 		fd = open(argv[i], O_RDONLY);
 		
 		if (fd == -1) {
