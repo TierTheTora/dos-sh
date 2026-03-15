@@ -357,7 +357,7 @@ dos_echo (char **argv, int argc)
 void
 dos_pause ()
 {
-	puts("Press any key to continue.\n");
+	puts("Press any key to continue.");
 	(void)getch();
 }
 
