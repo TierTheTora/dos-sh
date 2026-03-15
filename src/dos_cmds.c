@@ -47,23 +47,78 @@ get_longest_name (char *path)
 	return maxlen + 2;
 }
 
+int
+print_ent_info (char *file, char *d_name, 
+                 int *dirs, int *files, int *bytes,
+		 int maxlen, bool b, bool w)
+{
+	time_t mod_time;
+	struct tm *timeinfo;
+	struct stat statbuf;
+	struct winsize ws;
+	char timebuf[81];
+	int linesz;
+
+	linesz = 0;
+	ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
+
+	if (stat(file, &statbuf) == -1) {
+		perror("stat");
+		return -1;
+	}
+
+	mod_time = statbuf.st_mtime;
+	timeinfo = localtime(&mod_time);
+
+	strftime(timebuf, sizeof(timebuf),
+	         "%d-%m-%Y %H:%M", timeinfo);
+
+	if (S_ISDIR(statbuf.st_mode))
+		(*dirs)++;
+	else
+		(*files)++;
+	*bytes += statbuf.st_size;
+
+	if (b)
+		puts(d_name);
+	else if (w) {
+		linesz += maxlen;
+		if (linesz > ws.ws_col) {
+			linesz = 0;
+			putchar('\n');
+			fflush(stdout);
+		}
+		printf("%-*s", maxlen, d_name);
+	}
+	else {
+		printf("%-*s", maxlen, d_name);
+		printf("    %s     ",
+		       S_ISDIR(statbuf.st_mode) ?
+		         "<DIR>" :
+			 "     "
+		);
+		printf("% 8ld %s\n", statbuf.st_size,
+		       timebuf);
+	}
+
+	return 0;
+}
+
 void
 dos_dir (char **argv, int argc)
 {
 	/* nsa = non-switch args */
-	int i, maxlen, dirs, files, bytes, linesz, nsa, farg;
-	char path[PATH_MAX + 1], dpath[PATH_MAX + 1],
-	     file[PATH_MAX + NAME_MAX + 2], /* add 2 for null-byte and '/' */
-	     timebuf[81];
+	int i, maxlen, dirs, files, bytes, linesz, nsa, farg, filesz;
+	char path[PATH_MAX + 1], dpath[PATH_MAX + 1], timebuf[81],
+	     *file;
 	DIR *dir;
 	time_t mod_time;
 	bool w, b, p, s;
-	struct winsize ws;
 	struct stat statbuf;
 	struct tm *timeinfo;
 	struct dirent *ent;
 
-	dirs = files = bytes = linesz = nsa = 0;
+	dirs = files = bytes = linesz = nsa = filesz = 0;
 	w = b = p = s = false;
 
 	if (getcwd(path, sizeof(path)) == NULL) {
@@ -71,7 +126,16 @@ dos_dir (char **argv, int argc)
 		return;
 	}
 
-	memset(file, 0, sizeof(file));
+	filesz = strlen(path) + 2;
+	filesz *= sizeof(char);
+	file = malloc(filesz);
+
+	if (!file) {
+		perror("malloc");
+		return;
+	}
+
+	memset(file, 0, filesz);
 	strcpy(file, path);
 	strcat(file, "/");
 
@@ -106,48 +170,74 @@ dos_dir (char **argv, int argc)
 		maxlen = get_longest_name(path);
 	}
 
-	ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
-
 	if (nsa != 0) {
 		if (stat(file, &statbuf) == -1) {
 			perror("stat");
 			return;
 		}
 
-		puts(argv[farg]);
+		if (S_ISDIR(statbuf.st_mode)) {
+			filesz = strlen(path) + strlen(argv[farg]) + 2;
+			filesz *= sizeof(char);
+			file = realloc(file, filesz);
 
-		mod_time = statbuf.st_mtime;
-		timeinfo = localtime(&mod_time);
-
-		strftime(timebuf, sizeof(timebuf),
-		         "%d-%m-%Y %H:%M", timeinfo);
-
-		if (S_ISDIR(statbuf.st_mode))
-			dirs++;
-		else
-			files++;
-		bytes += statbuf.st_size;
-
-		goto print_info;
-		return;
-	}
-	else if ((dir = opendir(path)) != NULL) {
-		while ((ent = readdir(dir)) != NULL) {
-			memset(file, 0, sizeof(file));
-			strcpy(file, path);
-			strcat(file, "/");
-			strcat(file, ent->d_name);
-
-			if (stat(file, &statbuf) == -1) {
-				perror("stat");
+			if (!file) {
+				perror("realloc");
 				return;
 			}
 
+			memset(file, 0, filesz);
+			strcpy(file, path);
+			strcat(file, "/");
+			strcat(file, argv[farg]);
+
+			if ((dir = opendir(file)) != NULL) {
+				while ((ent = readdir(dir)) != NULL) {
+					filesz = strlen(path)
+					       + strlen(argv[farg])
+					       + 3
+					       + strlen(ent->d_name);
+					filesz *= sizeof(char);
+					file = realloc(file, filesz);
+
+					if (!file) {
+						perror("realloc");
+						return;
+					}
+
+					memset(file, 0, filesz);
+					strcpy(file, path);
+					strcat(file, "/");
+					strcat(file, argv[farg]);
+					strcat(file, "/");
+					strcat(file, ent->d_name);
+
+					if (print_ent_info(file, ent->d_name,
+						&dirs, &files, &bytes,
+						maxlen, b, w) != 0) {
+						return;
+					}
+				}
+			}
+			else {
+				perror("opendir");
+				free(file);
+				return;
+			}
+			free(file);
+			if (!b)
+				goto print_info;
+			return;
+		}
+
+		puts(argv[farg]);
+
+		if (!b) {
 			mod_time = statbuf.st_mtime;
 			timeinfo = localtime(&mod_time);
 
 			strftime(timebuf, sizeof(timebuf),
-			         "%d-%m-%Y %H:%M", timeinfo);
+				 "%d-%m-%Y %H:%M", timeinfo);
 
 			if (S_ISDIR(statbuf.st_mode))
 				dirs++;
@@ -155,36 +245,40 @@ dos_dir (char **argv, int argc)
 				files++;
 			bytes += statbuf.st_size;
 
-			if (b)
-				puts(ent->d_name);
-			else if (w) {
-				linesz += maxlen;
-				if (linesz > ws.ws_col) {
-					linesz = 0;
-					putchar('\n');
-					fflush(stdout);
-				}
-				printf("%-*s", maxlen,
-				       ent->d_name);
+			goto print_info;
+		}
+	}
+	if ((dir = opendir(path)) != NULL) {
+		while ((ent = readdir(dir)) != NULL) {
+			filesz = strlen(path) + 2
+			       + strlen(ent->d_name);
+			filesz *= sizeof(char);
+			file = realloc(file, filesz);
+
+			if (!file) {
+				perror("realloc");
+				return;
 			}
-			else {
-				printf("%-*s", maxlen,
-				       ent->d_name);
-				printf("    %s     ",
-				       S_ISDIR(statbuf.st_mode) ?
-				         "<DIR>" :
-					 "     "
-				);
-				printf("% 8ld %s\n", statbuf.st_size,
-				       timebuf);
+
+			memset(file, 0, filesz);
+			strcpy(file, path);
+			strcat(file, "/");
+			strcat(file, ent->d_name);
+
+			if (print_ent_info(file, ent->d_name,
+			               &dirs, &files, &bytes,
+			               maxlen, b, w) != 0) {
+				return;
 			}
 		}
 		closedir(dir);
 	}
 	else {
 		perror("opendir");
+		free(file);
 		return;
 	}
+	free(file);
 	if (!b) {
 		print_info:
 		printf("\n% 8d File(s)  % 21d Byte(s).\n", files, bytes);
