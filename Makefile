@@ -3,14 +3,14 @@ FLAGS=-Wall -Wextra
 
 all: build
 
-build: src/print_box.h src/print_box.c \
+build: src/print.h src/print.c \
        src/dos_const.h src/dos_exec.h \
        src/dos_exec.c src/dos_cmds.c \
        src/dos_cmds.h src/dos_lib.h \
        src/dos_lib.c src/parse_opt.h \
        main.c
 	mkdir -p build
-	$(CC) $(FLAGS) -c src/print_box.c -o build/print_box.o
+	$(CC) $(FLAGS) -c src/print.c -o build/print.o
 	$(CC) $(FLAGS) -c src/dos_lib.c -o build/dos_lib.o
 	$(CC) $(FLAGS) -c src/dos_cmds.c -o build/dos_cmds.o
 	$(CC) $(FLAGS) -c src/dos_exec.c -o build/dos_exec.o

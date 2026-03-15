@@ -1,4 +1,4 @@
-#include "src/print_box.h"
+#include "src/print.h"
 #include "src/dos_exec.h"
 #include "src/parse_opt.h"
 #include "src/dos_cmds.h"
@@ -51,7 +51,8 @@ main ()
 
 	
 	for (;;) {
-		write(STDOUT_FILENO, "\nC:>", 4);
+		print_path();
+		//write(STDOUT_FILENO, "\nC:>", 4);
 		bytes_read = read(STDIN_FILENO, buffer, bytes);
 		if (bytes_read < 0) {
 			perror("read");

@@ -9,6 +9,7 @@
 void
 dos_exec (const char *cmd, char **argv, int argc)
 {
+	if (cmd == NULL) return;
 	if (strcasecmp(cmd, "exit") == 0)
 		dos_exit();
 	else if (strcasecmp(cmd, "help") == 0)
@@ -23,6 +24,14 @@ dos_exec (const char *cmd, char **argv, int argc)
 		dos_type(argv, argc);
 	else if (strcasecmp(cmd, "cls") == 0)
 		dos_cls();
-	else
+	else if (strcasecmp(cmd, "cd") == 0)
+		dos_cd(argv, argc);
+	else if (strcasecmp(cmd, "chdir") == 0)
+		dos_cd(argv, argc);
+	else if (strcasecmp(cmd, "dir") == 0)
+		dos_dir(argv, argc);
+	else if (strcasecmp(cmd, "rem") != 0)
 		printf("Illegal command: %s.\n", cmd);
+
+	putchar('\n');
 }

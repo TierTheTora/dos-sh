@@ -1,9 +1,11 @@
-#include "print_box.h"
+#include "print.h"
+#include <linux/limits.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 void
 put_tabl_h (size_t len)
@@ -84,4 +86,34 @@ print_box (const char *msg)
 	put_tabl_h(ssi.longest_substr);
 	put_tabl_v(msg, msglen, ssi);
 	put_tabl_h(ssi.longest_substr);
+}
+
+void
+dosify_dir (char *path)
+{
+	int i;
+
+	for (i = 0; path[i] != 0; i++) {
+		if (path[i] == '/')
+			path[i] = '\\';
+	}
+}
+
+void
+print_path ()
+{
+	char path[PATH_MAX + 1];
+
+	memset(path, 0, sizeof(path));
+
+	if (getcwd(path, sizeof(path)) != NULL) {
+		dosify_dir(path);
+		write(STDIN_FILENO, path, sizeof(path));
+		putchar('>');
+		fflush(stdout);
+	}
+	else {
+		perror("getcwd");
+		abort();
+	}
 }

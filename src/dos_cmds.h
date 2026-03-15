@@ -15,5 +15,9 @@ void dos_type
 	(char **argv, int argc);
 void dos_cls
 	();
+void dos_cd
+	(char **argv, int argc);
+void dos_dir
+	(char **argv, int argc);
 
 #endif /* DOS_CMDS_H */
