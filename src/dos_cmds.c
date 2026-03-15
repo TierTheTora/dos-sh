@@ -15,12 +15,7 @@
 #include <sys/ioctl.h>
 #include <sys/stat.h>
 #include <time.h>
-
-void
-dos_exit ()
-{
-	exit(0);
-}
+#include <errno.h>
 
 int
 get_longest_name (char *path)
@@ -287,36 +282,6 @@ dos_dir (char **argv, int argc)
 }
 
 void
-dos_help (char **argv, int argc)
-{
-	int i;
-	bool all;
-
-	all = false;
-
-	puts("<DIR     > Directory View.\n"
-	     "<CHDIR   > Displays/changes the current directory.\n"
-	     "<CD      > Displays/changes the current directory.\n"
-	     "<CLS     > Clear screen.\n"
-	     "<ECHO    > Display messages.\n"
-	     "<EXIT    > Exit from the shell.\n"
-	     "<HELP    > Show help.\n"
-	     "<PAUSE   > Wait for 1 keystroke to continue.\n"
-	     "<TYPE    > Display the contents of a text-file.\n"
-	     "<VER     > View the DOS version."
-	);
-
-	for (i = 0; i < argc; i++) {
-		if (strcasecmp(argv[i], "/all") == 0) {
-			all = true;
-		}
-	}
-	if (all == true)
-		puts("More commands coming soon . . ."
-		);
-}
-
-void
 dos_cd (char **argv, int argc)
 {
 	char cwd[PATH_MAX];
@@ -333,9 +298,50 @@ dos_cd (char **argv, int argc)
 }
 
 void
-dos_ver ()
+dos_cls ()
 {
-	puts("DOS version " DOS_VERSION);
+	write(STDOUT_FILENO, "\033[2J\033[H", 7);
+}
+
+void
+dos_del (char **argv, int argc)
+{
+	int i;
+	struct stat statbuf;
+	char cwd[PATH_MAX + 1];
+
+	if (argc < 1) {
+		puts("Illegal Path.");
+		return;
+	}
+	for (i = 0; i < argc; i++) {
+		char path[PATH_MAX + strlen(argv[i]) + 1];
+
+		if (getcwd(cwd, sizeof(cwd)) == NULL) {
+			perror("getcwd");
+			return;
+		}
+
+		strcpy(path, cwd);
+		strcat(path, "/");
+		strcat(path, argv[i]);
+
+		if (stat(path, &statbuf) == -1) {
+			if (errno == ENOENT)
+				puts("Illegal Path.");
+			else {
+				perror("stat");
+			}
+			return;
+		}
+		if (S_ISDIR(statbuf.st_mode)) {
+			return;
+		}
+		if (remove(path) == -1) {
+			perror("remove");
+			return;
+		}
+	}
 }
 
 void
@@ -355,10 +361,127 @@ dos_echo (char **argv, int argc)
 }
 
 void
+dos_exit ()
+{
+	exit(0);
+}
+
+void
+dos_help (char **argv, int argc)
+{
+	int i;
+	bool all;
+
+	all = false;
+
+	puts("<DIR     > Directory View.\n"
+	     "<CHDIR   > Displays/changes the current directory.\n"
+	     "<CD      > Displays/changes the current directory.\n"
+	     "<CLS     > Clear screen.\n"
+	     "<DEL     > Removes one or more files.\n"
+	     "<DELETE  > Removes one or more files.\n"
+	     "<ERASE   > Removes one or more files.\n"
+	     "<ECHO    > Display messages.\n"
+	     "<EXIT    > Exit from the shell.\n"
+	     "<HELP    > Show help.\n"
+	     "<MKDIR   > Make Directory.\n"
+	     "<MD      > Make Directory.\n"
+	     "<PAUSE   > Wait for 1 keystroke to continue.\n"
+	     "<RMDIR   > Remove Directory.\n"
+	     "<RD      > Remove Directory.\n"
+	     "<REM     > Add comments in a batch file.\n"
+	     "<TYPE    > Display the contents of a text-file.\n"
+	     "<VER     > View the DOS version."
+	);
+
+	for (i = 0; i < argc; i++) {
+		if (strcasecmp(argv[i], "/all") == 0) {
+			all = true;
+		}
+	}
+	if (all == true)
+		puts("More commands coming soon . . ."
+		);
+}
+
+void
+dos_mkdir (char **argv, int argc)
+{
+	struct stat statbuf;
+	char cwd[PATH_MAX + 1],
+	     path[PATH_MAX + strlen(argv[0]) + 1];
+
+	if (argc != 1) {
+		puts("The syntax of the command is incorrect.");
+		return;
+	}
+
+
+	if (getcwd(cwd, sizeof(cwd)) == NULL) {
+		perror("getcwd");
+		return;
+	}
+
+	strcpy(path, cwd);
+	strcat(path, "/");
+	strcat(path, argv[0]);
+
+	if (stat(path, &statbuf) == 0) {
+		puts("Path already exists.");
+		return;
+	}
+	if (mkdir(path, 0755) == -1) {
+		perror("mkdir");
+		return;
+	}
+}
+
+void
 dos_pause ()
 {
 	puts("Press any key to continue.");
 	(void)getch();
+}
+
+void
+dos_rmdir (char **argv, int argc)
+{
+	int i;
+	struct stat statbuf;
+	char cwd[PATH_MAX + 1];
+
+	if (argc < 1) {
+		puts("Illegal Path.");
+		return;
+	}
+	for (i = 0; i < argc; i++) {
+		char path[PATH_MAX + strlen(argv[i]) + 1];
+
+		if (getcwd(cwd, sizeof(cwd)) == NULL) {
+			perror("getcwd");
+			return;
+		}
+
+		strcpy(path, cwd);
+		strcat(path, "/");
+		strcat(path, argv[i]);
+
+		if (stat(path, &statbuf) == -1) {
+			if (errno == ENOENT)
+				puts("Illegal Path.");
+			else {
+				perror("stat");
+			}
+			return;
+		}
+		if (!S_ISDIR(statbuf.st_mode)) {
+			return;
+		}
+		if (remove(path) == -1) {
+			perror("remove");
+			return;
+		}
+	}
 }
 
 void
@@ -389,7 +512,7 @@ dos_type (char **argv, int argc)
 }
 
 void
-dos_cls ()
+dos_ver ()
 {
-	write(STDOUT_FILENO, "\033[2J\033[H", 7);
+	puts("DOS version " DOS_VERSION);
 }
