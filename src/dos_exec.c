@@ -11,7 +11,7 @@ dos_exec (const char *cmd, char **argv, int argc)
 {
 	if (cmd == NULL) return;
 
-	else if (strcasecmp(cmd, "dir") == 0)
+	if (strcasecmp(cmd, "dir") == 0)
 		dos_dir(argv, argc);
 
 	else if (strcasecmp(cmd, "chdir") == 0)
@@ -51,14 +51,17 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "rd") == 0)
 		dos_rmdir(argv, argc);
 
-	else if (strcasecmp(cmd, "rem") != 0)
-		printf("Illegal command: %s.\n", cmd);
+	else if (strcasecmp(cmd, "touch") == 0)
+		dos_touch(argv, argc);
 
 	else if (strcasecmp(cmd, "type") == 0)
 		dos_type(argv, argc);
 
 	else if (strcasecmp(cmd, "ver") == 0)
 		dos_ver();
+
+	else if (strcasecmp(cmd, "rem") != 0)
+		printf("Illegal command: %s.\n", cmd);
 
 	putchar('\n');
 }

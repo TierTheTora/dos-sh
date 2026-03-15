@@ -390,6 +390,7 @@ dos_help (char **argv, int argc)
 	     "<RMDIR   > Remove Directory.\n"
 	     "<RD      > Remove Directory.\n"
 	     "<REM     > Add comments in a batch file.\n"
+	     "<TOUCH   > Make File.\n"
 	     "<TYPE    > Display the contents of a text-file.\n"
 	     "<VER     > View the DOS version."
 	);
@@ -407,29 +408,29 @@ dos_help (char **argv, int argc)
 void
 dos_mkdir (char **argv, int argc)
 {
-	struct stat statbuf;
-	char cwd[PATH_MAX + 1],
-	     path[PATH_MAX + strlen(argv[0]) + 1];
+	char cwd[PATH_MAX + 1];
 
 	if (argc != 1) {
 		puts("The syntax of the command is incorrect.");
 		return;
 	}
 
-
 	if (getcwd(cwd, sizeof(cwd)) == NULL) {
 		perror("getcwd");
 		return;
 	}
 
+	char path[PATH_MAX + strlen(argv[0]) + 1];
+
 	strcpy(path, cwd);
 	strcat(path, "/");
 	strcat(path, argv[0]);
 
-	if (stat(path, &statbuf) == 0) {
+	if (access(path, F_OK) == 0) {
 		puts("Path already exists.");
 		return;
 	}
+
 	if (mkdir(path, 0755) == -1) {
 		perror("mkdir");
 		return;
@@ -482,6 +483,35 @@ dos_rmdir (char **argv, int argc)
 			return;
 		}
 	}
+}
+
+void
+dos_touch (char **argv, int argc)
+{
+	char cwd[PATH_MAX + 1];
+
+	if (argc != 1) {
+		puts("The syntax of the command is incorrect.");
+		return;
+	}
+
+	if (getcwd(cwd, sizeof(cwd)) == NULL) {
+		perror("getcwd");
+		return;
+	}
+
+	char path[PATH_MAX + strlen(argv[0]) + 1];
+
+	strcpy(path, cwd);
+	strcat(path, "/");
+	strcat(path, argv[0]);
+
+	if (access(path, F_OK) == 0) {
+		puts("File already exists.");
+		return;
+	}
+	
+	creat(path, 0755);
 }
 
 void
