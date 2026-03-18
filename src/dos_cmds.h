@@ -1,13 +1,15 @@
 #ifndef DOS_CMDS_H
 # define DOS_CMDS_H
 
-void dos_dir
+void dos_box
 	(char **argv, int argc);
 void dos_cd
 	(char **argv, int argc);
 void dos_cls
 	();
 void dos_del
+	(char **argv, int argc);
+void dos_dir
 	(char **argv, int argc);
 void dos_echo
 	(char **argv, int argc);

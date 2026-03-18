@@ -11,12 +11,12 @@ dos_exec (const char *cmd, char **argv, int argc)
 {
 	if (cmd == NULL) return;
 
-	if (strcasecmp(cmd, "dir") == 0)
-		dos_dir(argv, argc);
+	if (strcasecmp(cmd, "box") == 0)
+		dos_box(argv, argc);
 
-	else if (strcasecmp(cmd, "chdir") == 0)
-		dos_cd(argv, argc);
 	else if (strcasecmp(cmd, "cd") == 0)
+		dos_cd(argv, argc);
+	else if (strcasecmp(cmd, "chdir") == 0)
 		dos_cd(argv, argc);
 
 	else if (strcasecmp(cmd, "cls") == 0)
@@ -26,6 +26,10 @@ dos_exec (const char *cmd, char **argv, int argc)
 		dos_del(argv, argc);
 	else if (strcasecmp(cmd, "delete") == 0)
 		dos_del(argv, argc);
+
+	else if (strcasecmp(cmd, "dir") == 0)
+		dos_dir(argv, argc);
+
 	else if (strcasecmp(cmd, "erase") == 0)
 		dos_del(argv, argc);
 

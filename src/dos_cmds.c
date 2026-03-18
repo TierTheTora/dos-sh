@@ -17,6 +17,33 @@
 #include <time.h>
 #include <errno.h>
 
+
+void 
+dos_box (char **argv, int argc)
+{
+	int i, msgsz, msgidx, j;
+
+	msgsz = msgidx = 0;
+
+	for (i = 0; i < argc; i++) {
+		/* +1 for space */
+		msgsz += strlen(argv[i]) + 1;
+	}
+
+	char msg[msgsz + 1];
+
+	for (i = 0; i < argc; i++) {
+		for (j = 0; argv[i][j] != 0; j++)
+			msg[msgidx++] = argv[i][j];
+		if (i < argc - 1)
+			msg[msgidx++] = ' ';
+	}
+	msg[msgidx] = 0;
+
+	print_box(msg);
+	putchar('\n');
+}
+
 int
 get_longest_name (char *path)
 {
@@ -399,12 +426,13 @@ dos_help (char **argv, int argc)
 
 	all = false;
 
-	puts("<DIR     > Directory View.\n"
-	     "<CHDIR   > Displays/changes the current directory.\n"
+	puts("<BOX     > Display messages in a box.\n"
 	     "<CD      > Displays/changes the current directory.\n"
+	     "<CHDIR   > Displays/changes the current directory.\n"
 	     "<CLS     > Clear screen.\n"
 	     "<DEL     > Removes one or more files.\n"
 	     "<DELETE  > Removes one or more files.\n"
+	     "<DIR     > Directory View.\n"
 	     "<ERASE   > Removes one or more files.\n"
 	     "<ECHO    > Display messages.\n"
 	     "<EXIT    > Exit from the shell.\n"
