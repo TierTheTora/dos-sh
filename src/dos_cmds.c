@@ -38,8 +38,9 @@ get_longest_name (char *path)
 			maxlen = len;
 	}
 
-	/* add 2 for additional padding */
-	return maxlen + 2;
+	closedir(dir);
+
+	return maxlen;
 }
 
 int
@@ -82,7 +83,10 @@ print_ent_info (char *file, char *d_name,
 			putchar('\n');
 			fflush(stdout);
 		}
-		printf("%-*s", maxlen, d_name);
+		if (S_ISDIR(statbuf.st_mode))
+			printf("[%s]%-*c", d_name, maxlen, ' ');
+		else
+			printf("%-*s", maxlen + 2, d_name);
 	}
 	else {
 		printf("%-*s", maxlen, d_name);
@@ -234,7 +238,10 @@ dos_dir (char **argv, int argc)
 				free(file);
 				return;
 			}
+
+			closedir(dir);
 			free(file);
+
 			if (!b)
 				goto print_info;
 			return;
