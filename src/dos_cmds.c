@@ -1,7 +1,7 @@
 #include "dos_cmds.h"
 #include "dos_const.h"
 #include "print.h"
-#include "dos_lib.h"
+#include "conio.h"
 #include <linux/limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -316,7 +316,7 @@ dos_cd (char **argv, int argc)
 void
 dos_cls ()
 {
-	write(STDOUT_FILENO, "\033[2J\033[H", 7);
+	clrscr();
 }
 
 void
