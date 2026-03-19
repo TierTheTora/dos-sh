@@ -18,6 +18,8 @@
 #include <errno.h>
 #include <libgen.h>
 
+bool echo = true;
+
 void 
 dos_box (char **argv, int argc)
 {
@@ -54,6 +56,9 @@ dos_copy (char **argv, int argc)
 		puts("The syntax of the command is incorrect.\n");
 		return;
 	}
+
+	undosify_dir(argv[0]);
+	undosify_dir(argv[1]);
 
 	file = argv[0];
 	dest = argv[1];
@@ -171,7 +176,7 @@ print_ent_info (char *file, char *d_name,
 	}
 	else {
 		printf("%-*s", maxlen, d_name);
-		printf("    %s     ",
+		printf("    %s    ",
 			S_ISDIR(statbuf.st_mode) ?
 			"<DIR>" :
 			"     "
@@ -412,7 +417,6 @@ dos_del (char **argv, int argc)
 {
 	int i;
 	struct stat statbuf;
-	char cwd[PATH_MAX + 1];
 
 	if (argc < 1) {
 		puts("Illegal Path.");
@@ -421,18 +425,7 @@ dos_del (char **argv, int argc)
 	for (i = 0; i < argc; i++) {
 		undosify_dir(argv[i]);
 		
-		char path[PATH_MAX + strlen(argv[i]) + 1];
-
-		if (getcwd(cwd, sizeof(cwd)) == NULL) {
-			perror("getcwd");
-			return;
-		}
-
-		strcpy(path, cwd);
-		strcat(path, "/");
-		strcat(path, argv[i]);
-
-		if (lstat(path, &statbuf) == -1) {
+		if (lstat(argv[i], &statbuf) == -1) {
 			if (errno == ENOENT)
 				puts("Illegal Path.");
 			else {
@@ -443,7 +436,7 @@ dos_del (char **argv, int argc)
 		if (S_ISDIR(statbuf.st_mode)) {
 			return;
 		}
-		if (remove(path) == -1) {
+		if (remove(argv[i]) == -1) {
 			perror("remove");
 			return;
 		}
@@ -454,6 +447,17 @@ void
 dos_echo (char **argv, int argc)
 {
 	int i, arglen;
+
+	if (argc == 1) {
+		if (strcasecmp(argv[0], "on") == 0) {
+			echo = true;
+			return;
+		}
+		else if (strcasecmp(argv[0], "off") == 0) {
+			echo = false;
+			return;
+		}
+	}
 
 	for (i = 0; i < argc; i++) {
 		arglen = strlen(argv[i]);
@@ -517,32 +521,19 @@ dos_help (char **argv, int argc)
 void
 dos_mkdir (char **argv, int argc)
 {
-	char cwd[PATH_MAX + 1];
-
 	if (argc != 1) {
 		puts("The syntax of the command is incorrect.");
 		return;
 	}
 
-	if (getcwd(cwd, sizeof(cwd)) == NULL) {
-		perror("getcwd");
-		return;
-	}
-
 	undosify_dir(argv[0]);
 
-	char path[PATH_MAX + strlen(argv[0]) + 1];
-
-	strcpy(path, cwd);
-	strcat(path, "/");
-	strcat(path, argv[0]);
-
-	if (access(path, F_OK) == 0) {
+	if (access(argv[0], F_OK) == 0) {
 		puts("Path already exists.");
 		return;
 	}
 
-	if (mkdir(path, 0755) == -1) {
+	if (mkdir(argv[0], 0755) == -1) {
 		perror("mkdir");
 		return;
 	}
@@ -560,7 +551,6 @@ dos_rmdir (char **argv, int argc)
 {
 	int i;
 	struct stat statbuf;
-	char cwd[PATH_MAX + 1];
 
 	if (argc < 1) {
 		puts("Illegal Path.");
@@ -569,18 +559,7 @@ dos_rmdir (char **argv, int argc)
 	for (i = 0; i < argc; i++) {
 		undosify_dir(argv[i]);
 
-		char path[PATH_MAX + strlen(argv[i]) + 1];
-
-		if (getcwd(cwd, sizeof(cwd)) == NULL) {
-			perror("getcwd");
-			return;
-		}
-
-		strcpy(path, cwd);
-		strcat(path, "/");
-		strcat(path, argv[i]);
-
-		if (lstat(path, &statbuf) == -1) {
+		if (lstat(argv[i], &statbuf) == -1) {
 			if (errno == ENOENT)
 				puts("Illegal Path.");
 			else {
@@ -591,7 +570,7 @@ dos_rmdir (char **argv, int argc)
 		if (!S_ISDIR(statbuf.st_mode)) {
 			return;
 		}
-		if (remove(path) == -1) {
+		if (remove(argv[i]) == -1) {
 			perror("remove");
 			return;
 		}
@@ -601,79 +580,58 @@ dos_rmdir (char **argv, int argc)
 void
 dos_ren (char **argv, int argc)
 {
-	char cwd[PATH_MAX + 1], path1[PATH_MAX + 3],
-	     path2[PATH_MAX + 3], dir[PATH_MAX + 1],
-	     *lastslash;
+	char src[PATH_MAX + 1], dir[PATH_MAX + 1],
+	     dst[PATH_MAX + 4], *lastslash;
 
 	if (argc != 2) {
 		puts("The syntax of the command is incorrect.");
-		return;
-	}
-	if (getcwd(cwd, sizeof(cwd)) == NULL) {
-		perror("getcwd");
 		return;
 	}
 
 	undosify_dir(argv[0]);
 	undosify_dir(argv[1]);
 
-	if (argv[0][0] == '/')
-		strncpy(path1, argv[0], PATH_MAX);
-	else
-		snprintf(path1, sizeof(path1), "%s/%s", cwd, argv[0]);
-	path1[PATH_MAX] = 0;
-
-	strcpy(dir, path1);
-	dir[PATH_MAX] = 0;
-
-	lastslash = strrchr(dir, '/');
+	strncpy(src, argv[0], PATH_MAX + 1);
+	lastslash = strrchr(src, '/');
 
 	if (lastslash == NULL)
 		strcpy(dir, ".");
-	else
+	else {
 		*lastslash = 0;
+		strcpy(dir, src);
+	}
 
-	snprintf(path2, sizeof(path2), "%s/%s", dir, argv[1]);
+	snprintf(dst, sizeof(dst), "%s/%s", dir, argv[1]);
 
-	if (access(path2, F_OK) == 0) {
+	if (access(dst, F_OK) == 0) {
 		puts("File already exists.");
 		return;
 	}
-	if (access(path1, F_OK) != 0) {
+	if (access(argv[0], F_OK) != 0) {
 		puts("File does not exist.");
 		return;
 	}
 
-	if (rename(path1, path2) != 0)
+	if (rename(argv[0], dst) != 0)
 		perror("rename");
 }
 
 void
 dos_touch (char **argv, int argc)
 {
-	char cwd[PATH_MAX + 1];
-
 	if (argc != 1) {
 		puts("The syntax of the command is incorrect.");
-		return;
-	}
-	if (getcwd(cwd, sizeof(cwd)) == NULL) {
-		perror("getcwd");
 		return;
 	}
 
 	undosify_dir(argv[0]);
 
-	char path[PATH_MAX + strlen(argv[0]) + 3];
-
-	snprintf(path, sizeof(path), "%s/%s", cwd, argv[0]);
-
-	if (access(path, F_OK) == 0) {
+	if (access(argv[0], F_OK) == 0) {
 		puts("File already exists.");
 		return;
 	}
 	
-	creat(path, 0755);
+	creat(argv[0], 0755);
 }
 
 void

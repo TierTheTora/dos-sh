@@ -51,8 +51,9 @@ main ()
 
 	
 	for (;;) {
-		print_path();
-		//write(STDOUT_FILENO, "\nC:>", 4);
+		if (echo)
+			print_path();
+
 		bytes_read = read(STDIN_FILENO, buffer, bytes);
 		if (bytes_read < 0) {
 			perror("read");

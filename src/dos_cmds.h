@@ -1,6 +1,10 @@
 #ifndef DOS_CMDS_H
 # define DOS_CMDS_H
 
+#include <stdbool.h>
+
+extern bool echo;
+
 void dos_box
 	(char **argv, int argc);
 void dos_cd

@@ -10,6 +10,10 @@ void
 dos_exec (const char *cmd, char **argv, int argc)
 {
 	if (cmd == NULL) return;
+	if (*cmd == '@') {
+		cmd++;
+		if (*cmd == 0) return;
+	}
 
 	if (strcasecmp(cmd, "box") == 0)
 		dos_box(argv, argc);
@@ -73,5 +77,6 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "rem") != 0)
 		printf("Illegal command: %s.\n", cmd);
 
-	putchar('\n');
+	if (echo)
+		putchar('\n');
 }
