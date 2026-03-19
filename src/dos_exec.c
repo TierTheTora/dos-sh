@@ -22,6 +22,9 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "cls") == 0)
 		dos_cls();
 
+	else if (strcasecmp(cmd, "copy") == 0)
+		dos_copy(argv, argc);
+
 	else if (strcasecmp(cmd, "del") == 0)
 		dos_del(argv, argc);
 	else if (strcasecmp(cmd, "delete") == 0)

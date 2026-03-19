@@ -43,6 +43,61 @@ dos_box (char **argv, int argc)
 	print_box(msg);
 }
 
+void
+dos_copy (char **argv, int argc)
+{
+	char *file, *dest, buffer[256];
+	int fd, dfd, mode, bytes_read;
+	struct stat statbuf;
+
+	if (argc != 2) {
+		puts("The syntax of the command is incorrect.\n");
+		return;
+	}
+
+	file = argv[0];
+	dest = argv[1];
+	fd = open(file, O_RDONLY);
+
+	if (fd < 0) {
+		perror("open");
+		return;
+	}
+	
+	lstat(file, &statbuf);
+	mode = statbuf.st_mode;
+
+	if (access(dest, F_OK) == 0) {
+		puts("File already exists.");
+		return;
+	}
+	if (access(file, F_OK) != 0) {
+		puts("File does not exist.");
+		return;
+	}
+
+	creat(dest, mode);
+	dfd = open(dest, O_RDWR);
+
+	if (dfd < 0) {
+		perror("open");
+		return;
+	}
+
+	memset(buffer, 0, sizeof(buffer));
+	bytes_read = 0;
+
+	while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0) {
+		if (write(dfd, buffer, bytes_read) != bytes_read) {
+			perror("write");
+			return;
+		}
+		memset(buffer, 0, sizeof(buffer));
+	}
+
+	close(fd);
+}
+
 int
 get_longest_name (char *path)
 {
@@ -429,6 +484,7 @@ dos_help (char **argv, int argc)
 	     "<CD      > Displays/changes the current directory.\n"
 	     "<CHDIR   > Displays/changes the current directory.\n"
 	     "<CLS     > Clear screen.\n"
+	     "<COPY    > Copy file.\n"
 	     "<DEL     > Removes one or more files.\n"
 	     "<DELETE  > Removes one or more files.\n"
 	     "<DIR     > Directory View.\n"

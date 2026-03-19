@@ -7,6 +7,8 @@ void dos_cd
 	(char **argv, int argc);
 void dos_cls
 	();
+void dos_copy
+	(char **argv, int argc);
 void dos_del
 	(char **argv, int argc);
 void dos_dir
