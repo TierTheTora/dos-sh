@@ -55,6 +55,9 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "rd") == 0)
 		dos_rmdir(argv, argc);
 
+	else if (strcasecmp(cmd, "ren") == 0)
+		dos_ren(argv, argc);
+
 	else if (strcasecmp(cmd, "touch") == 0)
 		dos_touch(argv, argc);
 

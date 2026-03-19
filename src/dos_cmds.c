@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <errno.h>
-
+#include <libgen.h>
 
 void 
 dos_box (char **argv, int argc)
@@ -41,7 +41,6 @@ dos_box (char **argv, int argc)
 	msg[msgidx] = 0;
 
 	print_box(msg);
-	putchar('\n');
 }
 
 int
@@ -443,6 +442,7 @@ dos_help (char **argv, int argc)
 	     "<RMDIR   > Remove Directory.\n"
 	     "<RD      > Remove Directory.\n"
 	     "<REM     > Add comments in a batch file.\n"
+	     "<REN     > Rename file.\n"
 	     "<TOUCH   > Make File.\n"
 	     "<TYPE    > Display the contents of a text-file.\n"
 	     "<VER     > View the DOS version."
@@ -543,6 +543,56 @@ dos_rmdir (char **argv, int argc)
 }
 
 void
+dos_ren (char **argv, int argc)
+{
+	char cwd[PATH_MAX + 1], path1[PATH_MAX + 3],
+	     path2[PATH_MAX + 3], dir[PATH_MAX + 1],
+	     *lastslash;
+
+	if (argc != 2) {
+		puts("The syntax of the command is incorrect.");
+		return;
+	}
+	if (getcwd(cwd, sizeof(cwd)) == NULL) {
+		perror("getcwd");
+		return;
+	}
+
+	undosify_dir(argv[0]);
+	undosify_dir(argv[1]);
+
+	if (argv[0][0] == '/')
+		strncpy(path1, argv[0], PATH_MAX);
+	else
+		snprintf(path1, sizeof(path1), "%s/%s", cwd, argv[0]);
+	path1[PATH_MAX] = 0;
+
+	strcpy(dir, path1);
+	dir[PATH_MAX] = 0;
+
+	lastslash = strrchr(dir, '/');
+
+	if (lastslash == NULL)
+		strcpy(dir, ".");
+	else
+		*lastslash = 0;
+
+	snprintf(path2, sizeof(path2), "%s/%s", dir, argv[1]);
+
+	if (access(path2, F_OK) == 0) {
+		puts("File already exists.");
+		return;
+	}
+	if (access(path1, F_OK) != 0) {
+		puts("File does not exist.");
+		return;
+	}
+
+	if (rename(path1, path2) != 0)
+		perror("rename");
+}
+
+void
 dos_touch (char **argv, int argc)
 {
 	char cwd[PATH_MAX + 1];
@@ -551,7 +601,6 @@ dos_touch (char **argv, int argc)
 		puts("The syntax of the command is incorrect.");
 		return;
 	}
-
 	if (getcwd(cwd, sizeof(cwd)) == NULL) {
 		perror("getcwd");
 		return;
@@ -559,11 +608,9 @@ dos_touch (char **argv, int argc)
 
 	undosify_dir(argv[0]);
 
-	char path[PATH_MAX + strlen(argv[0]) + 1];
+	char path[PATH_MAX + strlen(argv[0]) + 3];
 
-	strcpy(path, cwd);
-	strcat(path, "/");
-	strcat(path, argv[0]);
+	snprintf(path, sizeof(path), "%s/%s", cwd, argv[0]);
 
 	if (access(path, F_OK) == 0) {
 		puts("File already exists.");

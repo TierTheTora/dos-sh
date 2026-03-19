@@ -23,6 +23,8 @@ void dos_pause
 	();
 void dos_rmdir
 	(char **argv, int argc);
+void dos_ren
+	(char **argv, int argc);
 void dos_touch
 	(char **argv, int argc);
 void dos_type
