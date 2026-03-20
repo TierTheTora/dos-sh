@@ -128,3 +128,38 @@ print_path ()
 		abort();
 	}
 }
+
+void
+print_readable_bytes (size_t bytes)
+{
+	double pb, tb, gb, mb, kb;
+
+	pb = (double)bytes / PBYTE_SIZE;
+	tb = (double)bytes / TBYTE_SIZE;
+	gb = (double)bytes / GBYTE_SIZE;
+	mb = (double)bytes / MBYTE_SIZE;
+	kb = (double)bytes / KBYTE_SIZE;
+
+	if (pb >= 1.0f) {
+		printf("%20.1fPB\n", pb);
+		return;
+	}
+	else if (tb >= 1.0f) {
+		printf("%20.1fTB\n", tb);
+		return;
+	}
+	else if (gb >= 1.0f) {
+		printf("%20.1fGB\n", gb);
+		return;
+	}
+	else if (mb >= 1.0f) {
+		printf("%20.1fMB\n", mb);
+		return;
+	}
+	else if (kb >= 1.0f) {
+		printf("%20.1fKB\n", kb);
+		return;
+	}
+	else
+		printf("%20zuB\n", bytes);
+}

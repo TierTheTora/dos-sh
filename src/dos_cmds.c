@@ -16,7 +16,7 @@
 #include <sys/stat.h>
 #include <time.h>
 #include <errno.h>
-#include <libgen.h>
+#include <sys/statvfs.h>
 
 bool echo = true;
 
@@ -261,13 +261,14 @@ dos_dir (char **argv, int argc)
 			nsa++;
 		}
 	}
+	
+	maxlen = get_longest_name(file);
 
 	if (!b) {
 		char dpath[filesz];
 		strcpy(dpath, file);
 		dosify_dir(dpath);
 		printf("Directory of %s.\n", dpath);
-		maxlen = get_longest_name(path);
 	}
 
 	if (nsa != 0) {
@@ -477,6 +478,53 @@ dos_exit ()
 }
 
 void
+dos_free (char **argv, int argc)
+{
+	struct statvfs stfs;
+	size_t total_b, used_b, free_b;
+	int i;
+	bool h;
+
+	if (statvfs("/", &stfs) != 0) {
+		perror("statvfs");
+		return;
+	}
+
+	free_b  = stfs.f_bavail * stfs.f_frsize;
+	total_b = stfs.f_blocks * stfs.f_frsize;
+	used_b  = total_b - free_b;
+
+	for (i = 0; i < argc; i++) {
+		if (strcasecmp(argv[i], "/h") == 0)
+			h = true;
+		else {
+			puts("Illegal switch.");
+			return;
+		}
+	}
+
+	if (h) {
+		putchar('\n');
+		print("Total: ");
+		print_readable_bytes(total_b);
+		print("Used:  ");
+		print_readable_bytes(used_b);
+		print("Free:  ");
+		print_readable_bytes(free_b);
+		return;
+	}
+
+	printf("\n"
+	       "Total: %20zu\n"
+	       "Used:  %20zu\n"
+	       "Free:  %20zu\n",
+	       total_b,
+	       used_b,
+	       free_b
+	);
+}
+
+void
 dos_help (char **argv, int argc)
 {
 	int i;
@@ -495,6 +543,7 @@ dos_help (char **argv, int argc)
 	     "<ERASE   > Removes one or more files.\n"
 	     "<ECHO    > Display messages.\n"
 	     "<EXIT    > Exit from the shell.\n"
+	     "<FREE    > Display free disk space.\n"
 	     "<HELP    > Show help.\n"
 	     "<MKDIR   > Make Directory.\n"
 	     "<MD      > Make Directory.\n"

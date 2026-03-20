@@ -1,8 +1,17 @@
 #ifndef DOS_PRINT_H
 # define DOS_PRINT_H
 
+#include <stddef.h>
 #include <sys/types.h>
 #include <stdarg.h>
+#include <unistd.h>
+#include <string.h>
+
+#define PBYTE_SIZE (1125899906842624ULL)
+#define TBYTE_SIZE (   1099511627776ULL)
+#define GBYTE_SIZE (      1073741824ULL)
+#define MBYTE_SIZE (         1048576ULL)
+#define KBYTE_SIZE (            1024ULL)
 
 struct substr_info {
 	size_t longest_substr;
@@ -21,5 +30,19 @@ void undosify_dir
 	(char *path);
 void print_path
 	();
+void print_readable_bytes
+	(size_t bytes);
+
+static inline int
+print (char *msg)
+{
+	return write(STDOUT_FILENO, msg, strlen(msg));
+}
+
+static inline int
+fprint (char *msg, int fd)
+{
+	return write(fd, msg, strlen(msg));
+}
 
 #endif /* DOS_PRINT_H */
