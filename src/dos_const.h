@@ -3,12 +3,6 @@
 
 extern int ERRORLEVEL;
 
-#define ERRLVL_NONE     0
-#define ERRLVL_MILD     1
-#define ERRLVL_MEDIUM   2
-#define ERRLVL_SEVERE   3
-#define ERRLVL_CRITICAL 4
-
 #define DOS_VERSION "1.0.0"
 
 #define MEM_MAX       0xFFFFF

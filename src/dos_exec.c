@@ -46,6 +46,9 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "exit") == 0)
 		dos_exit();
 
+	else if (strcasecmp(cmd, "fc") == 0)
+		dos_fc(argv, argc);
+
 	else if (strcasecmp(cmd, "free") == 0)
 		dos_free(argv, argc);
 

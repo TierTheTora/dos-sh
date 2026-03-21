@@ -21,6 +21,8 @@ void dos_echo
 	(char **argv, int argc);
 void dos_exit
 	();
+void dos_fc
+	(char **argv, int argc);
 void dos_free
 	(char **argv, int argc);
 void dos_help

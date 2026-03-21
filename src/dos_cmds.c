@@ -478,6 +478,78 @@ dos_exit ()
 }
 
 void
+dos_fc (char **argv, int argc)
+{
+	struct stat statbuf;
+	size_t f1sz, f2sz;
+	int f1fd, f2fd;
+	char f1ch, f2ch;
+	bool neq;
+
+	neq = false;
+
+	if (argc != 2) {
+		puts("The syntax of the command is incorrect.");
+		return;
+	}
+
+	undosify_dir(argv[0]);
+	undosify_dir(argv[1]);
+
+	if (lstat(argv[0], &statbuf) != 0) {
+		perror("stat");
+		return;
+	}
+
+	f1sz = statbuf.st_size;
+
+	if (lstat(argv[1], &statbuf) != 0) {
+		perror("stat");
+		return;
+	}
+
+	f2sz = statbuf.st_size;
+
+	if (f1sz != f2sz)
+		goto files_differ;
+
+	f1fd = open(argv[0], O_RDONLY);
+	f2fd = open(argv[1], O_RDONLY);
+
+	if (f1fd < 0) {
+		perror("open");
+		return;
+	}
+	if (f2fd < 0) {
+		perror("open");
+		return;
+	}
+
+	while (read(f1fd, &f1ch, 1) == 1
+	    && read(f2fd, &f2ch, 1) == 1) {
+		if (f1ch != f2ch) {
+			neq = true;
+			break;
+		}
+	}
+
+	close(f1fd);
+	close(f2fd);
+
+	if (neq == true)
+		goto files_differ;
+	else
+		goto files_equal;
+
+	files_differ:
+		puts("Files are different.");
+		return;
+	files_equal:
+		puts("Files are identical.");
+		return;
+}
+
+void
 dos_free (char **argv, int argc)
 {
 	struct statvfs stfs;
@@ -543,6 +615,7 @@ dos_help (char **argv, int argc)
 	     "<ERASE   > Removes one or more files.\n"
 	     "<ECHO    > Display messages.\n"
 	     "<EXIT    > Exit from the shell.\n"
+	     "<FC      > Compare two files.\n"
 	     "<FREE    > Display free disk space.\n"
 	     "<HELP    > Show help.\n"
 	     "<MKDIR   > Make Directory.\n"

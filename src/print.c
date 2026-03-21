@@ -141,25 +141,25 @@ print_readable_bytes (size_t bytes)
 	kb = (double)bytes / KBYTE_SIZE;
 
 	if (pb >= 1.0f) {
-		printf("%20.1fPB\n", pb);
+		printf("%20.1fPb\n", pb);
 		return;
 	}
 	else if (tb >= 1.0f) {
-		printf("%20.1fTB\n", tb);
+		printf("%20.1fTb\n", tb);
 		return;
 	}
 	else if (gb >= 1.0f) {
-		printf("%20.1fGB\n", gb);
+		printf("%20.1fGb\n", gb);
 		return;
 	}
 	else if (mb >= 1.0f) {
-		printf("%20.1fMB\n", mb);
+		printf("%20.1fMb\n", mb);
 		return;
 	}
 	else if (kb >= 1.0f) {
-		printf("%20.1fKB\n", kb);
+		printf("%20.1fKb\n", kb);
 		return;
 	}
 	else
-		printf("%20zuB\n", bytes);
+		printf("%20zub\n", bytes);
 }
