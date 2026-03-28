@@ -1,5 +1,6 @@
 #include "dos_exec.h"
 #include "dos_lib.h"
+#include "print.h"
 #include <stdio.h>
 #include <strings.h>
 #include <unistd.h>
@@ -84,18 +85,27 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "ver") == 0)
 		dos_ver();
 
-
 	else {
-		int fd = open(cmd, O_RDONLY);
+		int fd;
+		char cmd2[strlen(cmd) + 5];
+
+		undosify_dir((char *)cmd);
+		strcpy(cmd2, cmd);
+		strcat(cmd2, ".com");
+
+		fd = open(cmd, O_RDONLY);
+
 		if (fd == -1) {
-			printf("Illegal command: %s.\n", cmd);
-			goto final;
+			fd = open(cmd2, O_RDONLY);
+			if (fd == -1) {
+				printf("Illegal command: %s.\n", cmd);
+				goto final;
+			}
 		}
 
 		REGS r;
 
 		runcom(&r, fd);
-
 		close(fd);
 	}
 
