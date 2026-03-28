@@ -2,6 +2,8 @@
 #include "headers/dos_exec.h"
 #include "headers/parse_opt.h"
 #include "headers/dos_cmds.h"
+#include "headers/conio.h"
+#include "headers/keyb.h"
 
 #include <linux/limits.h>
 #include <stdio.h>
@@ -30,8 +32,10 @@ free_all ()
 int
 main ()
 {
-	int bytes, bytes_read;
+	int bytes, bytes_read, chptr;
+	char ch, seq1, seq2;
 	bytes = 256;
+	bytes_read = chptr = 0;
 	buffer = malloc(bytes * sizeof(char));
 
 	dos_cls();
@@ -51,34 +55,99 @@ main ()
 
 	
 	for (;;) {
-		if (echo)
-			print_path();
+		if (echo) print_path();
+		chptr = 0;
+		bytes_read = 0;
+		buffer[0] = 0;
 
-		bytes_read = read(STDIN_FILENO, buffer, bytes);
-		if (bytes_read < 0) {
-			perror("read");
-			abort();
-		}
-		if (bytes_read < 2)
-			continue;
-		if (bytes_read >= bytes) {
-			bytes = bytes_read + 1;
-			tmpbuf = realloc(buffer, bytes * sizeof(char));
-			if (tmpbuf == NULL) {
-				buf_freeable = false;
-				perror("realloc");
-				puts("Command too long!");
+		while (true) {
+			ch = getch();
+
+			if (ch == EOF) return 0;
+			if (ch == '\033') {
+				seq1 = getch();
+				seq2 = getch();
+
+				if (seq1 == '[') {
+					switch (seq2) {
+					case 'C':
+						if (chptr < bytes_read) {
+							chptr++;
+							print("\033[C");
+						}
+						break;
+					case 'D':
+						if (chptr > 0) {
+							chptr--;
+							print("\033[D");
+						}
+						break;
+					}
+				}
 				continue;
 			}
-			else {
-				buffer = tmpbuf;
 
+			if (ch == K_BACKSP) {
+				if (chptr > 0) {
+					memmove(&buffer[chptr - 1],
+				        &buffer[chptr],
+				        bytes_read - chptr);
+					
+					bytes_read--;
+					chptr--;
+					buffer[bytes_read] = 0;
+
+					print("\r\033[K");
+					
+					if (echo) print_path();
+					
+					print(buffer);
+					int move_back = bytes_read - chptr;
+					while (move_back--) printf("\033[D");
+				}
+				continue;
 			}
-		}
-		buffer[bytes_read - 1] = 0;
-		args = parse_cmd(buffer);
 
-		dos_exec(args.argv[0], &args.argv[1], args.argc - 1);
+			if (bytes_read + 2 >= bytes) {
+				bytes *= 2;
+				char *tmp = realloc(buffer,
+					bytes * sizeof(char));
+
+				if (tmp == NULL) {
+					buf_freeable = false;
+					perror("realloc");
+					return 1;
+				}
+
+				buffer = tmp;
+			}
+
+			if (ch == '\n') {
+				putchar('\n');
+				break;
+			}
+
+			memmove(&buffer[chptr + 1],
+			        &buffer[chptr],
+			        bytes_read - chptr);
+
+			buffer[chptr] = (char)ch;
+			chptr++;
+			bytes_read++;
+			buffer[bytes_read] = 0;
+
+			print("\r\033[K");
+			if (echo) print_path();
+			print(buffer);
+
+			int move_back = bytes_read - chptr;
+				while (move_back--) printf("\033[D");
+		}
+
+		if (bytes_read > 1) {
+			args = parse_cmd(buffer);
+			dos_exec(args.argv[0], &args.argv[1], args.argc - 1);
+		}
 	}
 
 	return 0;

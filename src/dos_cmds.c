@@ -461,6 +461,9 @@ dos_echo (char **argv, int argc)
 			return;
 		}
 	}
+	else if (argc == 0) {
+		printf("ECHO is %s.", echo ? "on" : "off");
+	}
 
 	for (i = 0; i < argc; i++) {
 		arglen = strlen(argv[i]);
