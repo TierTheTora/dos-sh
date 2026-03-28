@@ -1,8 +1,10 @@
 #include "dos_exec.h"
+#include "dos_lib.h"
 #include <stdio.h>
 #include <strings.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 #include "dos_cmds.h"
 
@@ -63,6 +65,8 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "pause") == 0)
 		dos_pause();
 
+	else if (strcasecmp(cmd, "rem") == 0) {}
+
 	else if (strcasecmp(cmd, "rmdir") == 0)
 		dos_rmdir(argv, argc);
 	else if (strcasecmp(cmd, "rd") == 0)
@@ -80,9 +84,22 @@ dos_exec (const char *cmd, char **argv, int argc)
 	else if (strcasecmp(cmd, "ver") == 0)
 		dos_ver();
 
-	else if (strcasecmp(cmd, "rem") != 0)
-		printf("Illegal command: %s.\n", cmd);
 
+	else {
+		int fd = open(cmd, O_RDONLY);
+		if (fd == -1) {
+			printf("Illegal command: %s.\n", cmd);
+			goto final;
+		}
+
+		REGS r;
+
+		runcom(&r, fd);
+
+		close(fd);
+	}
+
+	final:
 	if (echo)
 		putchar('\n');
 }

@@ -96,6 +96,8 @@ dosify_dir (char *path)
 	for (i = 0; path[i] != 0; i++) {
 		if (path[i] == '/')
 			path[i] = '\\';
+		else if (path[i] == '\\')
+			path[i] = '/';
 	}
 }
 
@@ -107,6 +109,8 @@ undosify_dir (char *path)
 	for (i = 0; path[i] != 0; i++) {
 		if (path[i] == '\\')
 			path[i] = '/';
+		else if (path[i] == '/')
+			path[i] = '\\';
 	}
 }
 

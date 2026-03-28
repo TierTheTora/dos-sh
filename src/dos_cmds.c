@@ -160,6 +160,8 @@ print_ent_info (char *file, char *d_name,
 		(*files)++;
 	*bytes += statbuf.st_size;
 
+	dosify_dir(d_name);
+
 	if (b)
 		puts(d_name);
 	else if (w) {

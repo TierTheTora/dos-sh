@@ -5,7 +5,8 @@ extern int ERRORLEVEL;
 
 #define DOS_VERSION "1.0.0"
 
-#define MEM_MAX       0xFFFFF
+#define PRG_START     0x100
+#define MEM_MAX       0xFFFF
 #define HANDLES_MAX   0xFFFF
 #define DOS_USER_HNDL 5
 #define HANDLE_UNUSED (-1)
