@@ -10,7 +10,7 @@ build: src/headers/print.h src/print.c \
        src/headers/parse_opt.h src/parse_opt.c \
        src/headers/conio.h src/conio.c \
        src/headers/dos_lib.h src/dos_lib.c \
-       main.c
+       src/main.c
 	mkdir -p build
 	$(CC) $(FLAGS) -c src/print.c -o build/print.o
 	$(CC) $(FLAGS) -c src/dos_cmds.c -o build/dos_cmds.o
@@ -18,7 +18,7 @@ build: src/headers/print.h src/print.c \
 	$(CC) $(FLAGS) -c src/parse_opt.c -o build/parse_opt.o
 	$(CC) $(FLAGS) -c src/conio.c -o build/conio.o
 	$(CC) $(FLAGS) -c src/dos_lib.c -o build/dos_lib.o
-	$(CC) $(FLAGS) main.c build/*.o -o build/dos
+	$(CC) $(FLAGS) src/main.c build/*.o -o build/dos
 
 clean:
 	rm -rf build

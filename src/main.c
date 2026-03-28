@@ -1,7 +1,7 @@
-#include "src/headers/print.h"
-#include "src/headers/dos_exec.h"
-#include "src/headers/parse_opt.h"
-#include "src/headers/dos_cmds.h"
+#include "headers/print.h"
+#include "headers/dos_exec.h"
+#include "headers/parse_opt.h"
+#include "headers/dos_cmds.h"
 
 #include <linux/limits.h>
 #include <stdio.h>
