@@ -90,20 +90,27 @@ main ()
 			if (ch == K_BACKSP) {
 				if (chptr > 0) {
 					memmove(&buffer[chptr - 1],
-				        &buffer[chptr],
-				        bytes_read - chptr);
+				                &buffer[chptr],
+				                bytes_read - chptr);
 					
 					bytes_read--;
 					chptr--;
 					buffer[bytes_read] = 0;
 
-					print("\r\033[K");
-					
-					if (echo) print_path();
-					
-					print(buffer);
-					int move_back = bytes_read - chptr;
-					while (move_back--) printf("\033[D");
+					putchar('\b');
+					if (bytes_read - chptr > 0) {
+						write(STDOUT_FILENO,
+						      &buffer[chptr],
+						      bytes_read - chptr);
+					}
+
+					putchar(' ');
+
+					int move_back = bytes_read - chptr + 1;
+
+					if (move_back > 0) {
+						printf("\033[%dD", move_back);
+					}
 				}
 				continue;
 			}
@@ -136,12 +143,11 @@ main ()
 			bytes_read++;
 			buffer[bytes_read] = 0;
 
-			print("\r\033[K");
-			if (echo) print_path();
-			print(buffer);
-
-			int move_back = bytes_read - chptr;
-				while (move_back--) printf("\033[D");
+			putchar(ch);
+			if (bytes_read - chptr > 0) {
+				printf("%*s", bytes_read - chptr, &buffer[chptr]);
+				printf("\033[%dD", bytes_read - chptr);
+			}
 		}
 
 		if (bytes_read > 1) {
