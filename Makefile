@@ -3,12 +3,13 @@ FLAGS=-Wall -Wextra
 
 all: build
 
-build: src/print.h src/print.c \
-       src/dos_const.h src/dos_exec.h \
-       src/dos_exec.c src/dos_cmds.c \
-       src/dos_cmds.h src/parse_opt.h \
-       src/conio.h src/conio.c \
-       src/dos_lib.h src/dos_lib.c \
+build: src/headers/print.h src/print.c \
+       src/headers/dos_const.h \
+       src/headers/dos_exec.h src/dos_exec.c \
+       src/headers/dos_cmds.h src/dos_cmds.c \
+       src/headers/parse_opt.h src/parse_opt.c \
+       src/headers/conio.h src/conio.c \
+       src/headers/dos_lib.h src/dos_lib.c \
        main.c
 	mkdir -p build
 	$(CC) $(FLAGS) -c src/print.c -o build/print.o

@@ -1,6 +1,6 @@
-#include "dos_lib.h"
-#include "dos_const.h"
-#include "conio.h"
+#include "headers/dos_lib.h"
+#include "headers/dos_const.h"
+#include "headers/conio.h"
 #include <termios.h>
 #include <unistd.h>
 #include <stdio.h>

@@ -1,7 +1,7 @@
-#include "dos_cmds.h"
-#include "dos_const.h"
-#include "print.h"
-#include "conio.h"
+#include "headers/dos_cmds.h"
+#include "headers/dos_const.h"
+#include "headers/print.h"
+#include "headers/conio.h"
 #include <linux/limits.h>
 #include <stddef.h>
 #include <stdlib.h>

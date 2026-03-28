@@ -1,13 +1,13 @@
-#include "dos_exec.h"
-#include "dos_lib.h"
-#include "print.h"
+#include "headers/dos_exec.h"
+#include "headers/dos_lib.h"
+#include "headers/print.h"
+#include "headers/dos_cmds.h"
 #include <stdio.h>
 #include <strings.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <fcntl.h>
 
-#include "dos_cmds.h"
 
 void
 dos_exec (const char *cmd, char **argv, int argc)
