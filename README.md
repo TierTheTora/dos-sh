@@ -4,4 +4,4 @@
 ## does it have all the commands DOS has?
 > no (not yet...)
 ## can it run COM programs?
-> no (not yet...)
+> yes (but only VERY simple programs)
