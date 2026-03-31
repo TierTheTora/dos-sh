@@ -1,4 +1,6 @@
 #include "headers/print.h"
+#include "headers/conio.h"
+#include "headers/keyb.h"
 #include <linux/limits.h>
 #include <stddef.h>
 #include <sys/types.h>
@@ -6,6 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 void
 put_tabl_h (size_t len)
@@ -166,4 +169,193 @@ print_readable_bytes (size_t bytes)
 	}
 	else
 		printf("%20zub\n", bytes);
+}
+
+int
+readprompt (char **buffer, int *bytes, bool *buf_freeable)
+{
+	int chptr, bytes_read;
+	char ch, seq1, seq2;
+	chptr = bytes_read = 0;
+
+	while (true) {
+		ch = getch();
+
+		if (ch == EOF) return -1;
+		if (ch == '\033') {
+			seq1 = getch();
+			seq2 = getch();
+
+			if (seq1 == '[') {
+				switch (seq2) {
+				case 'C':
+					if (chptr < bytes_read) {
+						chptr++;
+						print("\033[C");
+					}
+					break;
+				case 'D':
+					if (chptr > 0) {
+						chptr--;
+						print("\033[D");
+					}
+					break;
+				}
+			}
+			continue;
+		}
+
+		if (ch == K_BACKSP) {
+			if (chptr > 0) {
+				memmove(&(*buffer)[chptr - 1],
+			                &(*buffer)[chptr],
+			                bytes_read - chptr);
+				
+				bytes_read--;
+				chptr--;
+				(*buffer)[bytes_read] = 0;
+
+				putchar('\b');
+				if (bytes_read - chptr > 0) {
+					write(STDOUT_FILENO,
+					      &(*buffer)[chptr],
+					      bytes_read - chptr);
+				}
+
+				putchar(' ');
+
+				int move_back = bytes_read - chptr + 1;
+
+				if (move_back > 0) {
+					printf("\033[%dD", move_back);
+				}
+			}
+			continue;
+		}
+
+		if (bytes_read + 2 >= (*bytes)) {
+			(*bytes) *= 2;
+			char *tmp = realloc((*buffer),
+				(*bytes) * sizeof(char));
+
+			if (tmp == NULL) {
+				(*buf_freeable) = false;
+				perror("realloc");
+				return -1;
+			}
+
+			(*buffer) = tmp;
+		}
+
+		if (ch == '\n') {
+			putchar('\n');
+			break;
+		}
+
+		memmove(&(*buffer)[chptr + 1],
+		        &(*buffer)[chptr],
+		        bytes_read - chptr);
+
+		(*buffer)[chptr] = (char)ch;
+		chptr++;
+		bytes_read++;
+		(*buffer)[bytes_read] = 0;
+
+		putchar(ch);
+		if (bytes_read - chptr > 0) {
+			printf("%*s", bytes_read - chptr, &(*buffer)[chptr]);
+			printf("\033[%dD", bytes_read - chptr);
+		}
+	}
+
+	return bytes_read;
+}
+
+int
+dos_read (char *buffer, size_t max)
+{
+	int chptr, bytes_read;
+	char ch, seq1, seq2;
+	chptr = bytes_read = 0;
+
+	while (true) {
+		ch = getch();
+
+		if (ch == EOF) return -1;
+		if (ch == '\033') {
+			seq1 = getch();
+			seq2 = getch();
+
+			if (seq1 == '[') {
+				switch (seq2) {
+				case 'C':
+					if (chptr < bytes_read) {
+						chptr++;
+						print("\033[C");
+					}
+					break;
+				case 'D':
+					if (chptr > 0) {
+						chptr--;
+						print("\033[D");
+					}
+					break;
+				}
+			}
+			continue;
+		}
+
+		if (ch == K_BACKSP) {
+			if (chptr > 0) {
+				memmove(&buffer[chptr - 1],
+			                &buffer[chptr],
+			                bytes_read - chptr);
+				
+				bytes_read--;
+				chptr--;
+				buffer[bytes_read] = 0;
+
+				putchar('\b');
+				if (bytes_read - chptr > 0) {
+					write(STDOUT_FILENO,
+					      &buffer[chptr],
+					      bytes_read - chptr);
+				}
+
+				putchar(' ');
+
+				int move_back = bytes_read - chptr + 1;
+
+				if (move_back > 0) {
+					printf("\033[%dD", move_back);
+				}
+			}
+			continue;
+		}
+
+		if ((size_t)(bytes_read) + 2 >= max) {
+			while ((ch = getch()) != '\n');
+			return 0;
+		}
+
+		if (ch == '\n')
+			break;
+
+		memmove(&buffer[chptr + 1],
+		        &buffer[chptr],
+		        bytes_read - chptr);
+
+		buffer[chptr] = (char)ch;
+		chptr++;
+		bytes_read++;
+		buffer[bytes_read] = 0;
+
+		putchar(ch);
+		if (bytes_read - chptr > 0) {
+			printf("%*s", bytes_read - chptr, &buffer[chptr]);
+			printf("\033[%dD", bytes_read - chptr);
+		}
+	}
+
+	return bytes_read;
 }

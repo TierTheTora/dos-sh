@@ -1,5 +1,6 @@
 #include "headers/dos_lib.h"
 #include "headers/dos_const.h"
+#include "headers/print.h"
 #include "headers/conio.h"
 #include <termios.h>
 #include <unistd.h>
@@ -69,31 +70,26 @@ dos_sys_print INT21 (REGS *r)
 void DOS_SYSCALL(0x0A)
 dos_sys_read INT21 (REGS *r)
 {
-	WORD addr, i;
-	BYTE c, max_chars;
+	WORD addr;
+	BYTE max_chars;
+	char *buffer;
+	int bytes_read;
 	addr = SEG_OFF(r->DS, r->DX);
 	max_chars = MEMORY[addr];
 
 	fflush(stdout);
 
-	for (i = 0; i < max_chars; i++) {
-		c = getch();
+	buffer = (char *)(&MEMORY[addr + 2]);
+	bytes_read = dos_read(buffer, max_chars);
 
-		if (c == '\n') {
-			MEMORY[addr + 1] = i;
-			r->AL = i;
-			return;
-		}
-
-		putchar(c);
-
-		MEMORY[addr + 2 + i] = c;
+	if (bytes_read < 0) {
+		r->AL = 0;
+		MEMORY[addr + 1] = 0;
+		return;
 	}
 
-	MEMORY[addr + 1] = max_chars;
-	r->AL = max_chars;
-
-	while ((c = getch()) != '\n');
+	MEMORY[addr + 1] = bytes_read;
+	r->AL = bytes_read;
 }
 
 

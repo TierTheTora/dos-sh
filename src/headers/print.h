@@ -6,6 +6,7 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 
 #define PBYTE_SIZE (1125899906842624ULL)
 #define TBYTE_SIZE (   1099511627776ULL)
@@ -32,6 +33,10 @@ void print_path
 	();
 void print_readable_bytes
 	(size_t bytes);
+int readprompt
+	(char **buffer, int *bytes, bool *buf_freeable);
+int dos_read
+	(char *buffer, size_t max);
 
 static inline int
 print (char *msg)

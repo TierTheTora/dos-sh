@@ -8,8 +8,10 @@ build_readin: read_input.asm
 build_hello: hello.asm
 	$(AS) hello.asm -o build/hello.com
 
-build: build_readin build_hello
+build_dir:
 	mkdir -p build
+
+build: build_dir build_readin build_hello
 
 clean:
 	rm -rf build

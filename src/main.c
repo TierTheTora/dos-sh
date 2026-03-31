@@ -2,8 +2,6 @@
 #include "headers/dos_exec.h"
 #include "headers/parse_opt.h"
 #include "headers/dos_cmds.h"
-#include "headers/conio.h"
-#include "headers/keyb.h"
 
 #include <linux/limits.h>
 #include <stdio.h>
@@ -32,10 +30,8 @@ free_all ()
 int
 main ()
 {
-	int bytes, bytes_read, chptr;
-	char ch, seq1, seq2;
+	int bytes, bytes_read;
 	bytes = 256;
-	bytes_read = chptr = 0;
 	buffer = malloc(bytes * sizeof(char));
 
 	dos_cls();
@@ -56,99 +52,9 @@ main ()
 	
 	for (;;) {
 		if (echo) print_path();
-		chptr = 0;
-		bytes_read = 0;
 		buffer[0] = 0;
 
-		while (true) {
-			ch = getch();
-
-			if (ch == EOF) return 0;
-			if (ch == '\033') {
-				seq1 = getch();
-				seq2 = getch();
-
-				if (seq1 == '[') {
-					switch (seq2) {
-					case 'C':
-						if (chptr < bytes_read) {
-							chptr++;
-							print("\033[C");
-						}
-						break;
-					case 'D':
-						if (chptr > 0) {
-							chptr--;
-							print("\033[D");
-						}
-						break;
-					}
-				}
-				continue;
-			}
-
-			if (ch == K_BACKSP) {
-				if (chptr > 0) {
-					memmove(&buffer[chptr - 1],
-				                &buffer[chptr],
-				                bytes_read - chptr);
-					
-					bytes_read--;
-					chptr--;
-					buffer[bytes_read] = 0;
-
-					putchar('\b');
-					if (bytes_read - chptr > 0) {
-						write(STDOUT_FILENO,
-						      &buffer[chptr],
-						      bytes_read - chptr);
-					}
-
-					putchar(' ');
-
-					int move_back = bytes_read - chptr + 1;
-
-					if (move_back > 0) {
-						printf("\033[%dD", move_back);
-					}
-				}
-				continue;
-			}
-
-			if (bytes_read + 2 >= bytes) {
-				bytes *= 2;
-				char *tmp = realloc(buffer,
-					bytes * sizeof(char));
-
-				if (tmp == NULL) {
-					buf_freeable = false;
-					perror("realloc");
-					return 1;
-				}
-
-				buffer = tmp;
-			}
-
-			if (ch == '\n') {
-				putchar('\n');
-				break;
-			}
-
-			memmove(&buffer[chptr + 1],
-			        &buffer[chptr],
-			        bytes_read - chptr);
-
-			buffer[chptr] = (char)ch;
-			chptr++;
-			bytes_read++;
-			buffer[bytes_read] = 0;
-
-			putchar(ch);
-			if (bytes_read - chptr > 0) {
-				printf("%*s", bytes_read - chptr, &buffer[chptr]);
-				printf("\033[%dD", bytes_read - chptr);
-			}
-		}
+		bytes_read = readprompt(&buffer, &bytes, &buf_freeable);
 
 		if (bytes_read > 1) {
 			args = parse_cmd(buffer);
