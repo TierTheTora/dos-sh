@@ -57,18 +57,11 @@ getch ()
 int
 getche ()
 {
-	struct termios old_sett, new_sett;
 	int ch;
 
-	tcgetattr(STDIN_FILENO, &old_sett);
-	new_sett = old_sett;
-	new_sett.c_lflag &= ~(ICANON | ECHO);
-	tcsetattr(STDIN_FILENO, TCSANOW, &new_sett);
-
-	ch = getchar();
+	ch = getch();
 
 	putchar(ch);
-	tcsetattr(STDIN_FILENO, TCSANOW, &old_sett);
 
 	return ch;
 }

@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <stdbool.h>
 
 HANDLE handles[HANDLES_MAX + 1] = { HANDLE_UNUSED };
 int ERRORLEVEL = 0;
@@ -45,7 +46,6 @@ dos_sys_getche INT21 (REGS *r)
 
 	c = getche();
 	r->AL = (BYTE)c;
-	putchar(c);
 } 
 
 void DOS_SYSCALL(0x02)
@@ -58,7 +58,7 @@ dos_sys_putchar INT21 (REGS *r)
 void DOS_SYSCALL(0x09)
 dos_sys_print INT21 (REGS *r)
 {
-	DWORD addr = SEG_OFF(r->DS, r->DX);
+	WORD addr = SEG_OFF(r->DS, r->DX);
 	
 	while (MEMORY[addr] != '$') {
 		putchar(MEMORY[addr]);
@@ -66,10 +66,41 @@ dos_sys_print INT21 (REGS *r)
 	}
 }
 
+void DOS_SYSCALL(0x0A)
+dos_sys_read INT21 (REGS *r)
+{
+	WORD addr, i;
+	BYTE c, max_chars;
+	addr = SEG_OFF(r->DS, r->DX);
+	max_chars = MEMORY[addr];
+
+	fflush(stdout);
+
+	for (i = 0; i < max_chars; i++) {
+		c = getch();
+
+		if (c == '\n') {
+			MEMORY[addr + 1] = i;
+			r->AL = i;
+			return;
+		}
+
+		putchar(c);
+
+		MEMORY[addr + 2 + i] = c;
+	}
+
+	MEMORY[addr + 1] = max_chars;
+	r->AL = max_chars;
+
+	while ((c = getch()) != '\n');
+}
+
+
 HANDLE DOS_SYSCALL(0x3D)
 dos_sys_open INT21 (REGS *r)
 {
-	DWORD addr = SEG_OFF(r->DS, r->DX);
+	WORD addr = SEG_OFF(r->DS, r->DX);
 	BYTE *name = &MEMORY[addr];
 	int flags = O_RDONLY, fd;
 	HANDLE h;
@@ -110,20 +141,15 @@ dos_sys_close INT21 (REGS *r)
 }
 
 void DOS_SYSCALL(0x3F)
-dos_sys_read INT21 (REGS *r)
+dos_sys_readf INT21 (REGS *r)
 {
 	DWORD addr = SEG_OFF(r->DS, r->DX);
 	int fd = handles[r->BX];
 	int n = read(fd, &MEMORY[addr], r->CX);
 
-	if (n < 0) {
-		r->AX = 0;
-		SET_CF(r);
-	}
-	else {
-		r->AX = n;
-		CLEAR_CF(r);
-	}
+	r->AX = n;
+	if (n < 0) SET_CF(r);
+	else       CLEAR_CF(r);
 }
 
 void DOS_SYSCALL(0x40)
@@ -157,9 +183,10 @@ int86x (REGS *r)
 	case 0x01: dos_sys_getche (r); break;
 	case 0x02: dos_sys_putchar(r); break;
 	case 0x09: dos_sys_print  (r); break;
+	case 0x0A: dos_sys_read   (r); break;
 	case 0x3D: dos_sys_open   (r); break;
 	case 0x3E: dos_sys_close  (r); break;
-	case 0x3F: dos_sys_read   (r); break;
+	case 0x3F: dos_sys_readf  (r); break;
 	case 0x40: dos_sys_write  (r); break;
 	case 0x4C: dos_sys_exit   (r); break;
 	default: printf("INT21h, AH=%02X not implemented.\n", r->AH);
