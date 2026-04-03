@@ -5,6 +5,8 @@
 #include "headers/parse_opt.h"
 #include "headers/dos_exec.h"
 
+#include <stdarg.h>
+#include <stdint.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -69,8 +71,8 @@ update_f8 (REGS *r, BYTE dst, BYTE src, WORD res)
 	BYTE res8 = res & 0xFF;
 	r->flags &= ~(CF | OF | PF | AF | ZF | SF);
 
-	if (res > 0xFF)                        r->flags |= CF; 
 	if (res8 == 0)                         r->flags |= ZF;
+	if (res > 0xFF)                        r->flags |= CF; 
 	if (res8 & 0x80)                       r->flags |= SF;
 	if (bitsnum(res8) % 2 == 0)            r->flags |= PF;
 	if (((dst & 0xF) + (src & 0xF)) > 0xF) r->flags |= AF;
@@ -79,18 +81,35 @@ update_f8 (REGS *r, BYTE dst, BYTE src, WORD res)
 }
 
 void
-update_f16 (REGS *r, WORD dst, WORD src, DWORD res)
+update_f16_incdec (REGS *r, WORD old_v, WORD res, BOOL is_inc)
 {
-	WORD res16 = res & 0xFFFF;
 	r->flags &= ~(CF | OF | PF | AF | ZF | SF);
 
+	if (res == 0)                          r->flags |= ZF;
+	if (res & 0x8000)                      r->flags |= SF;
+	if (bitsnum(res & 0xFF) % 2 == 0)      r->flags |= PF;
+	if (is_inc) {
+		if ((old_v & 0xF) + 1 > 0xF)   r->flags |= AF;
+		if (old_v == 0x7FFF)           r->flags |= OF;
+	}
+	else {
+		if ((old_v & 0xF) - 1 < 0)     r->flags |= AF;
+		if (old_v == 0x8000)           r->flags |= OF;
+	}
+}
+
+void
+update_f16 (REGS *r, WORD dst, WORD src, DWORD res)
+{
+	r->flags &= ~(CF | OF | PF | AF | ZF | SF);
+
+	if (res == 0)                              r->flags |= ZF;
 	if (res > 0xFFFF)                          r->flags |= CF; 
-	if (res16 == 0)                            r->flags |= ZF;
-	if (res16 & 0x0080)                        r->flags |= SF;
-	if (bitsnum(res16 & 0xFF) % 2 == 0)        r->flags |= PF;
+	if (res & 0x8000)                          r->flags |= SF;
+	if (bitsnum(res & 0xFF) % 2 == 0)          r->flags |= PF;
 	if (((dst & 0xF) + (src & 0xF)) > 0xF)     r->flags |= AF;
 	if (((dst & 0x8000) == (src & 0x8000))
-	   &&(dst & 0x8000) != (res16 & 0x8000))   r->flags |= OF;
+	   &&(dst & 0x8000) != (res & 0x8000))     r->flags |= OF;
 }
 
 int
@@ -116,7 +135,7 @@ init_dos ()
 	return 0;
 }
 
-WORD
+DWORD
 calc_ea (REGS *r, BYTE modrm, WORD *ipidx)
 {
 	BYTE mod, rm;
@@ -128,6 +147,13 @@ calc_ea (REGS *r, BYTE modrm, WORD *ipidx)
 	switch (mod) {
 	case 0:
 		/* [rm] */
+		if (rm == 6) {
+			addr = (MEMORY[(*ipidx)])
+			     | (MEMORY[(*ipidx) + 1] << 8);
+			(*ipidx) += 2;
+			addr = SEG_OFF(r->DS, addr);
+			return (WORD)addr;
+		}
 		disp = 0;
 		break;
 	case 1:
@@ -144,6 +170,8 @@ calc_ea (REGS *r, BYTE modrm, WORD *ipidx)
 		return 0;
 	}
 
+	//printf("calc_ea: mod=%02X rm=%02X ipidx=%04X\n", mod, rm, *ipidx);
+
 	switch (rm) {
 	case 0: addr = r->BX + r->SI; break;
 	case 1: addr = r->BX + r->DI; break;
@@ -153,20 +181,21 @@ calc_ea (REGS *r, BYTE modrm, WORD *ipidx)
 	case 5: addr = r->DI;         break;
 	case 6: addr = r->BP;         break;
 	case 7: addr = r->BX;         break;
-	default: return 0;
+	default: return (DWORD)-1;
 	}
 
 	addr += disp;
 	addr = SEG_OFF(r->DS, addr);
 
-	return addr;
+	return (WORD)addr;
 }
 
 void
 exec_add_r8 (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm, *dst, *src, src_val, dst_val;
-	WORD res, addr;
+	WORD res;
+	DWORD addr;
 
 	modrm = MEMORY[(*ipidx)++];
 	mod   = (modrm >> 6) & 0x03;
@@ -198,7 +227,7 @@ exec_add_r8 (REGS *r, WORD *ipidx)
 	else {
 		addr = calc_ea(r, modrm, ipidx);
 
-		if (addr == 0 && modrm != 6) {
+		if (addr == (DWORD)-1 && modrm != 6) {
 			puts("Failed to calculate effective address");
 			return;
 		}
@@ -208,6 +237,188 @@ exec_add_r8 (REGS *r, WORD *ipidx)
 		MEMORY[addr] = res & 0xFF;
 
 		update_f8(r, dst_val, src_val, res);
+	}
+}
+
+void
+exec_mov_r16 (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm;
+	WORD *dst, *src, val;
+	DWORD addr;
+
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+	dst   = get_r16(r, reg);
+
+	if (!dst) {
+		puts("Illegal source register");
+		return;
+	}
+
+	if (mod == 3) {
+		src = get_r16(r, rm);
+
+		if (!src) {
+			puts("Illegal destination register");
+			return;
+		}
+
+		*dst = *src;
+	}
+	else {
+		addr = calc_ea(r, modrm, ipidx);
+
+		if (addr == (DWORD)-1 && modrm != 6) {
+			puts("Failed to calculate effective address");
+			return;
+		}
+
+		val = MEMORY[addr] | (MEMORY[addr + 1] << 8);
+		*dst = val;
+	}
+}
+
+void
+exec_mov_r8 (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm, *dst, *src;
+	DWORD addr;
+
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+	dst   = get_r8(r, reg);
+
+	if (!dst) {
+		puts("Illegal source register");
+		return;
+	}
+
+	if (mod == 3) {
+		src = get_r8(r, rm);
+
+		if (!src) {
+			puts("Illegal destination register");
+			return;
+		}
+
+		*dst = *src;
+	}
+	else {
+		addr = calc_ea(r, modrm, ipidx);
+
+		if (addr == (DWORD)-1 && modrm != 6) {
+			puts("Failed to calculate effective address");
+			return;
+		}
+
+		*dst = MEMORY[addr];
+	}
+}
+
+void
+exec_ff (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm;
+	DWORD addr;
+	WORD *r16, val;
+
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+
+	switch (reg) {
+	case 0:
+		if (mod == 3) {
+			r16 = get_r16(r, rm);
+			(*r16)++;
+
+			update_f16_incdec(r, (*r16) - 1, *r16, true);
+		}
+		else {
+			addr = calc_ea(r, modrm, ipidx);
+
+			if (addr == (DWORD)-1 && modrm != 6) {
+				puts("Failed to calculate effective address");
+				return;
+			}
+
+			val = (MEMORY[addr])
+			    | (MEMORY[addr + 1] << 8);
+			val++;
+
+			update_f16_incdec(r, val - 1, val, true);
+
+			MEMORY[addr]     = val & 0xFF;
+			MEMORY[addr + 1] = (val >> 8) & 0xFF;
+		}
+		break;
+	case 1:
+		if (mod == 3) {
+			r16 = get_r16(r, rm);
+			(*r16)--;
+
+			update_f16_incdec(r, (*r16) + 1, *r16, true);
+		}
+		else {
+			addr = calc_ea(r, modrm, ipidx);
+
+			if (addr == (DWORD)-1 && modrm != 6) {
+				puts("Failed to calculate effective address");
+				return;
+			}
+
+			val = (MEMORY[addr])
+			    | (MEMORY[addr + 1] << 8);
+			val--;
+
+			update_f16_incdec(r, val + 1, val, false);
+
+			MEMORY[addr]     = val & 0xFF;
+			MEMORY[addr + 1] = (val >> 8) & 0xFF;
+		}
+		break;
+	}
+}
+
+void
+exec_83 (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm;
+	int8_t imm8;
+	DWORD addr;
+	WORD *r16, val, imm16, res;
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+
+	switch (reg) {
+	case 7:
+		if (mod == 3) {
+			r16 = get_r16(r, rm);
+			val = *r16;
+		}
+		else {
+			addr = calc_ea(r, modrm, ipidx);
+			val  = (MEMORY[addr])
+			     | (MEMORY[addr + 1] << 8);
+		}
+
+		imm8  = MEMORY[(*ipidx)++];
+		imm16 = (int8_t)imm8;
+
+		res = val - imm16;
+		if (res == 0) r->flags |= ZF;
+
+		update_f16(r, val, imm16, res);
+
+		break;
 	}
 }
 
@@ -381,8 +592,8 @@ int86x (REGS *r)
 void
 runcom (REGS *r, int fd)
 {
-	BYTE ch, ch2, modrm, reg, rm, *src, *dst, off;
-	WORD *ipidx;
+	BYTE ch, ch2, mod, reg, rm, *src, *dst, off;
+	WORD *ipidx, off16, seg16;
 	int rret = read(fd, &MEMORY[PRG_START], MEM_MAX - PRG_START);
 
 	if (rret == -1) {
@@ -404,14 +615,35 @@ runcom (REGS *r, int fd)
 		case 0x00:
 			exec_add_r8(r, ipidx);
 			break;
+		/* jne/jnz $imm8 */
+		case 0x75:
+			off = MEMORY[(*ipidx)++];
+
+			if (!(r->flags & ZF))
+				(*ipidx) += (signed char)off;
+			break;
+		case 0x83:
+			exec_83(r, ipidx);
+			break;
 		/* mov %r8, %r8 */
 		case 0x88:
-			modrm = MEMORY[(*ipidx)++];
-			reg   = (modrm >> 3) & 0x7;
-			rm    = modrm & 0x7;
+			mod   = MEMORY[(*ipidx)++];
+			reg   = (mod >> 3) & 0x7;
+			rm    = mod & 0x7;
 			src   = get_r8(r, reg);
 			dst   = get_r8(r, rm);
 			*dst = *src;
+			break;
+		/* mov %r8, $imm/r8 */
+		case 0x8A:
+			exec_mov_r8(r, ipidx);
+			break;
+		/* mov %r16, $imm/r16*/
+		case 0x8B:
+			exec_mov_r16(r, ipidx);
+			break;
+		case 0x90:
+			(*ipidx)++;
 			break;
 		/* mov $imm16, %dx */
 		case 0xBA:
@@ -427,9 +659,9 @@ runcom (REGS *r, int fd)
 			ch2 = MEMORY[(*ipidx)++];
 			switch (ch2) {
 			case 0x20:
-				return;
+				goto unload_com;
 			case 0x21:
-				if (r->AH == 0x4C) return;
+				if (r->AH == 0x4C) goto unload_com;
 				int86x(r);
 				break;
 			default:
@@ -442,7 +674,7 @@ runcom (REGS *r, int fd)
 
 			if (r->SP + 1 >= MEM_MAX) {
 				puts("Stack underflow");
-				return;
+				goto unload_com;
 			}
 
 			newip = MEMORY[r->SP] | (MEMORY[r->SP + 1] << 8);
@@ -450,18 +682,41 @@ runcom (REGS *r, int fd)
 			r->IP = newip;
 			(*ipidx) = r->IP;
 
-			return;
+			goto unload_com;
 		}
 		/* jmp $imm8 */
 		case 0xEB:
-			   off = MEMORY[(*ipidx)++];
-			   (*ipidx) += (signed char)off;
-			   break;
+			off = MEMORY[(*ipidx)++];
+			(*ipidx) += (int8_t)off;
+			break;
+		/* jmp $imm16 */
+		case 0xE9:
+			off16 = (MEMORY[(*ipidx)])
+			      | (MEMORY[(*ipidx) + 1] << 8);
+			(*ipidx) += 2;
+			(*ipidx) += (int16_t)off16;
+			break;
+		/* jmp far $imm16:imm16 */
+		case 0xEA:
+			off16 = (MEMORY[(*ipidx)])
+			      | (MEMORY[(*ipidx) + 1] << 8);
+			seg16 = (MEMORY[(*ipidx) + 2])
+			      | (MEMORY[(*ipidx) + 3] << 8);
+			r->CS = seg16;
+			r->IP = off16;
+			(*ipidx) = SEG_OFF(seg16, off16);
+			break;
+		case 0xFF:
+			exec_ff(r, ipidx);
+			break;
 		default:
 			printf("Unhandled opcode: 0x%02X", ch);
-			return;
+			goto unload_com;
 		}
 	}
+
+	unload_com:
+	memset(&MEMORY[PRG_START], 0, MEM_MAX - PRG_START);
 }
 
 void

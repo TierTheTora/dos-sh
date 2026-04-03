@@ -1,3 +1,5 @@
+; read input and print it
+
 ORG 100h
 
 SECTION .data

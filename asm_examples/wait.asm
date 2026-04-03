@@ -1,3 +1,5 @@
+; wait forever
+
 ORG 100h
 
 SECTION .text

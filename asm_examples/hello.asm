@@ -1,3 +1,5 @@
+; print "Hello, World!"
+
 ORG 100h
 
 SECTION .data

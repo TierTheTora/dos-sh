@@ -1,3 +1,5 @@
+; read one char and print it
+
 ORG 100h
 
 SECTION .text
