@@ -9,6 +9,8 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <dirent.h>
+#include <stdlib.h>
 
 void
 dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
@@ -89,24 +91,53 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	else {
 		int fd, i;
 		REGS r;
+		DIR *dir;
+		struct dirent *ent;
 		char *fext;
 		const char *ext[] = { "", ".com", ".bat" };
 		const int ext_cnt = 3;
-		char cmd2[strlen(cmd) + 5];
+		char cmd2[strlen(cmd) + 10], *path, *last_slash,
+		     *base_cmd, name[strlen(cmd) + 10];
 
 		undosify_dir((char *)cmd);
 		strcpy(cmd2, cmd);
 
-		for (i = 0; i < ext_cnt; i++) {
-			snprintf(cmd2,
-			         sizeof(cmd2),
-			         "%s%s",
-			         cmd,
-			         ext[i]
-			);
+		path = strdup(cmd);
+		last_slash = strrchr(path, '/');
 
-			fd = open(cmd2, O_RDONLY);
-			if (fd != -1) break;
+		if (last_slash != NULL) {
+			*last_slash = 0;
+			base_cmd = last_slash + 1;
+		}
+		else {
+			strcpy(path, ".");
+			base_cmd = (char *)cmd;
+		}
+		
+		fd = -1;
+		dir = opendir(path);;
+
+		if (dir) {
+			while ((ent = readdir(dir)) != NULL) {
+				for (i = 0; i < ext_cnt; i++) {
+				snprintf(name, sizeof(name),
+					 "%s%s",
+					 base_cmd, ext[i]);
+
+				if (strcasecmp(ent->d_name,
+				               name) == 0) {
+					snprintf(cmd2, sizeof(cmd2),
+					         "%s/%s",
+					         path, ent->d_name);
+
+					fd = open(cmd2, O_RDONLY);
+
+					if (fd != -1) break;
+				}
+				}
+				if (fd != -1) break;
+			}
+			closedir(dir);
 		}
 
 		if (fd == -1) {
@@ -116,22 +147,15 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 			goto final;
 		}
 
-		if (strcasecmp(ext[i], ".com") == 0)
+		fext = strrchr(cmd2, '.');
+		if (fext && strcasecmp(fext, ".com") == 0)
 			runcom(&r, fd);
-		else if (strcasecmp(ext[i], ".bat") == 0)
+		else if (fext && strcasecmp(fext, ".bat") == 0)
 			runbat(fd);
-		else {
-			if (strlen(cmd) < 4)
-				goto illegal;
-			fext = (char *)cmd + strlen(cmd) - 4;
-			if (strcasecmp(fext, ".com") == 0)
-				runcom(&r, fd);
-			else if (strcasecmp(fext, ".bat") == 0)
-				runbat(fd);
-			else goto illegal;
-		}
+		else goto illegal;
 
 		close(fd);
+		free(path);
 	}
 
 	final:
