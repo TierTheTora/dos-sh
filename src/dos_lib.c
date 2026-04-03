@@ -381,7 +381,7 @@ int86x (REGS *r)
 void
 runcom (REGS *r, int fd)
 {
-	BYTE ch, ch2, modrm, reg, rm, *src, *dst;
+	BYTE ch, ch2, modrm, reg, rm, *src, *dst, off;
 	WORD *ipidx;
 	int rret = read(fd, &MEMORY[PRG_START], MEM_MAX - PRG_START);
 
@@ -454,7 +454,8 @@ runcom (REGS *r, int fd)
 		}
 		/* jmp $imm8 */
 		case 0xEB:
-			   (*ipidx) = MEMORY[(*ipidx) + 1];
+			   off = MEMORY[(*ipidx)++];
+			   (*ipidx) += (signed char)off;
 			   break;
 		default:
 			printf("Unhandled opcode: 0x%02X", ch);
