@@ -2,15 +2,16 @@
 #include "headers/dos_lib.h"
 #include "headers/print.h"
 #include "headers/dos_cmds.h"
+
 #include <stdio.h>
 #include <strings.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #include <fcntl.h>
-
+#include <stdbool.h>
 
 void
-dos_exec (const char *cmd, char **argv, int argc)
+dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 {
 	if (cmd == NULL) return;
 	if (*cmd == '@') {
@@ -86,30 +87,54 @@ dos_exec (const char *cmd, char **argv, int argc)
 		dos_ver();
 
 	else {
-		int fd;
+		int fd, i;
+		REGS r;
+		char *fext;
+		const char *ext[] = { "", ".com", ".bat" };
+		const int ext_cnt = 3;
 		char cmd2[strlen(cmd) + 5];
 
 		undosify_dir((char *)cmd);
 		strcpy(cmd2, cmd);
-		strcat(cmd2, ".com");
 
-		fd = open(cmd, O_RDONLY);
+		for (i = 0; i < ext_cnt; i++) {
+			snprintf(cmd2,
+			         sizeof(cmd2),
+			         "%s%s",
+			         cmd,
+			         ext[i]
+			);
 
-		if (fd == -1) {
 			fd = open(cmd2, O_RDONLY);
-			if (fd == -1) {
-				printf("Illegal command: %s.\n", cmd);
-				goto final;
-			}
+			if (fd != -1) break;
 		}
 
-		REGS r;
+		if (fd == -1) {
+			illegal:
+			dosify_dir((char *)cmd);
+			printf("Illegal command: %s.\n", cmd);
+			goto final;
+		}
 
-		runcom(&r, fd);
+		if (strcasecmp(ext[i], ".com") == 0)
+			runcom(&r, fd);
+		else if (strcasecmp(ext[i], ".bat") == 0)
+			runbat(fd);
+		else {
+			if (strlen(cmd) < 4)
+				goto illegal;
+			fext = (char *)cmd + strlen(cmd) - 4;
+			if (strcasecmp(fext, ".com") == 0)
+				runcom(&r, fd);
+			else if (strcasecmp(fext, ".bat") == 0)
+				runbat(fd);
+			else goto illegal;
+		}
+
 		close(fd);
 	}
 
 	final:
-	if (echo)
+	if (echo && !isbatfile)
 		putchar('\n');
 }

@@ -53,5 +53,7 @@ void int86x
 	(REGS *r);
 void runcom
 	(REGS *r, int fd);
+void runbat
+	(int fd);
 
 #endif /* DOS_LIB_H */

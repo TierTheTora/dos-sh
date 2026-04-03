@@ -101,7 +101,8 @@ main ()
 
 		if (bytes_read >= 1) {
 			args = parse_cmd(buffer);
-			dos_exec(args.argv[0], &args.argv[1], args.argc - 1);
+			dos_exec(args.argv[0], &args.argv[1],
+			         args.argc - 1, false);
 		}
 	}
 

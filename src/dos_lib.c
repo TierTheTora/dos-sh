@@ -2,6 +2,10 @@
 #include "headers/dos_const.h"
 #include "headers/print.h"
 #include "headers/conio.h"
+#include "headers/parse_opt.h"
+#include "headers/dos_exec.h"
+
+#include <string.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -457,4 +461,51 @@ runcom (REGS *r, int fd)
 			return;
 		}
 	}
+}
+
+void
+runbat (int fd)
+{
+	char *line, *tmpbuf, *tok;
+	int sz, ch, bytes;
+	struct opt arg;
+	sz = 256;
+	ch = bytes = 0;
+	line = calloc(sz, sizeof(char));
+
+	if (line == NULL) {
+		perror("calloc");
+		return;
+	}
+
+	while (read(fd, &ch, 1) == 1) {
+		if ((bytes + 1) >= sz) {
+			sz *= 2;
+			tmpbuf = realloc(line, sz * sizeof(char));
+			
+			if (tmpbuf == NULL) {
+				perror("realloc");
+				free(line);
+				return;
+			}
+
+			line = tmpbuf;
+		}
+
+		line[bytes++] = ch;
+	}
+
+	line[bytes] = 0;
+	tok = strtok(line, "\r\n");
+
+	while (tok != NULL) {
+		arg = parse_cmd(tok);
+		if (strcasecmp(arg.argv[0], "exit") == 0)
+			break;
+		dos_exec(arg.argv[0], &arg.argv[1],
+		         arg.argc - 1, true);
+		tok = strtok(NULL, "\r\n");
+	}
+
+	free(line);
 }
