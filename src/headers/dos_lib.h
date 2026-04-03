@@ -5,15 +5,26 @@
 #include "dos_const.h"
 
 #define SEG_OFF(seg, off) (((seg) << 4) + (off))
-#define SET_CF(r) ((r)->CF |= 1)
-#define CLEAR_CF(r) ((r)->CF &= ~1)
 
 #define DOS_SYSCALL(num)
 #define INT21
 
+#define CF 0x01
+#define PF 0x04
+#define OF 0x08
+#define AF 0x10
+#define ZF 0x40
+#define SF 0x80
+
+enum BITS {
+	_8BIT  = 0,
+	_16BIT = 1,
+};
+
 typedef uint8_t  BYTE;
 typedef uint16_t WORD;
 typedef uint32_t DWORD;
+typedef uint64_t QWORD;
 typedef int32_t  HANDLE;
 typedef _Bool    BOOL;
 
@@ -25,12 +36,15 @@ typedef struct {
 	WORD SI, DI, BP, SP;
 	WORD CS, DS, ES, FS, GS, SS;
 	WORD IP;
-	BOOL CF;
 	BYTE flags;
 } REGS;
 
-extern BYTE MEMORY[MEM_MAX + 1];
+extern BYTE *MEMORY;
+extern HANDLE *handles;
+extern BOOL memory_freeable, handles_freeable;
 
+int init_dos
+	();
 void init_handles
 	();
 HANDLE new_handle

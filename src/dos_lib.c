@@ -9,9 +9,203 @@
 #include <fcntl.h>
 #include <stdbool.h>
 
-HANDLE handles[HANDLES_MAX + 1] = { HANDLE_UNUSED };
+HANDLE *handles;
+BYTE *MEMORY;
 int ERRORLEVEL = 0;
-BYTE MEMORY[MEM_MAX + 1] = { 0 };
+BOOL memory_freeable = false;
+BOOL handles_freeable = false;
+
+DWORD
+bitsnum (DWORD n)
+{
+	DWORD cnt = 0;
+
+	while (n) {
+		cnt += n & 1;
+		n >>= 1;
+	}
+	return cnt;
+}
+
+BYTE *
+get_r8 (REGS *r, BYTE i)
+{
+	switch (i) {
+	case 0:  return &r->AL;
+	case 1:  return &r->CL;
+	case 2:  return &r->DL;
+	case 3:  return &r->BL;
+	case 4:  return &r->AH;
+	case 5:  return &r->CH;
+	case 6:  return &r->DH;
+	case 7:  return &r->BH;
+	default: return NULL;
+	}
+}
+
+WORD *
+get_r16 (REGS *r, BYTE i)
+{
+	switch (i) {
+	case 0:  return &r->AX;
+	case 1:  return &r->CX;
+	case 2:  return &r->DX;
+	case 3:  return &r->BX;
+	case 4:  return &r->SP;
+	case 5:  return &r->BP;
+	case 6:  return &r->SI;
+	case 7:  return &r->DI;
+	default: return NULL;
+	}
+}
+
+void
+update_f8 (REGS *r, BYTE dst, BYTE src, WORD res)
+{
+	BYTE res8 = res & 0xFF;
+	r->flags &= ~(CF | OF | PF | AF | ZF | SF);
+
+	if (res > 0xFF)                        r->flags |= CF; 
+	if (res8 == 0)                         r->flags |= ZF;
+	if (res8 & 0x80)                       r->flags |= SF;
+	if (bitsnum(res8) % 2 == 0)            r->flags |= PF;
+	if (((dst & 0xF) + (src & 0xF)) > 0xF) r->flags |= AF;
+	if (((dst & 0x80) == (src & 0x80))
+	   &&(dst & 0x80) != (res8 & 0x80))    r->flags |= OF;
+}
+
+void
+update_f16 (REGS *r, WORD dst, WORD src, DWORD res)
+{
+	WORD res16 = res & 0xFFFF;
+	r->flags &= ~(CF | OF | PF | AF | ZF | SF);
+
+	if (res > 0xFFFF)                          r->flags |= CF; 
+	if (res16 == 0)                            r->flags |= ZF;
+	if (res16 & 0x0080)                        r->flags |= SF;
+	if (bitsnum(res16 & 0xFF) % 2 == 0)        r->flags |= PF;
+	if (((dst & 0xF) + (src & 0xF)) > 0xF)     r->flags |= AF;
+	if (((dst & 0x8000) == (src & 0x8000))
+	   &&(dst & 0x8000) != (res16 & 0x8000))   r->flags |= OF;
+}
+
+int
+init_dos ()
+{
+	MEMORY = calloc(MEM_MAX + 1, sizeof(BYTE));
+	handles = malloc((HANDLES_MAX + 1) * sizeof(HANDLE));
+	handles_freeable = memory_freeable = true;
+
+	if (!MEMORY) {
+		puts("Could not initalize memory");
+		memory_freeable = false;
+		return -1;
+	}
+	if (!handles) {
+		puts("Could not initalize handles");
+		handles_freeable = false;
+		return -1;
+	}
+
+	memset(handles, HANDLE_UNUSED, HANDLES_MAX + 1);
+
+	return 0;
+}
+
+WORD
+calc_ea (REGS *r, BYTE modrm, WORD *ipidx)
+{
+	BYTE mod, rm;
+	WORD disp, addr;
+	mod  = (modrm >> 6) & 0x03;
+	rm   = modrm & 0x07;
+	disp = 0;
+
+	switch (mod) {
+	case 0:
+		/* [rm] */
+		disp = 0;
+		break;
+	case 1:
+		/* [rm + disp8] */
+		disp = MEMORY[(*ipidx)++];
+		break;
+	case 2:
+		/* [rm + disp16 */
+		disp = MEMORY[(*ipidx)] | (MEMORY[(*ipidx) + 1] << 8);
+		(*ipidx) += 2;
+		break;
+	case 3:
+		/* reg */
+		return 0;
+	}
+
+	switch (rm) {
+	case 0: addr = r->BX + r->SI; break;
+	case 1: addr = r->BX + r->DI; break;
+	case 2: addr = r->BP + r->SI; break;
+	case 3: addr = r->BP + r->DI; break;
+	case 4: addr = r->SI;         break;
+	case 5: addr = r->DI;         break;
+	case 6: addr = r->BP;         break;
+	case 7: addr = r->BX;         break;
+	default: return 0;
+	}
+
+	addr += disp;
+	addr = SEG_OFF(r->DS, addr);
+
+	return addr;
+}
+
+void
+exec_add_r8 (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm, *dst, *src, src_val, dst_val;
+	WORD res, addr;
+
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+	src   = get_r8(r, reg);
+
+	if (!src) {
+		puts("Illegal source register");
+		return;
+	}
+
+	src_val = *src;
+
+	if (mod == 3) {
+		dst = get_r8(r, rm);
+
+		if (!dst) {
+			puts("Illegal destination register");
+			return;
+		}
+
+		dst_val = *dst;
+		res = dst_val + src_val;
+		*dst = res & 0xFF;
+
+		update_f8(r, dst_val, src_val, res);
+	}
+	else {
+		addr = calc_ea(r, modrm, ipidx);
+
+		if (addr == 0 && modrm != 6) {
+			puts("Failed to calculate effective address");
+			return;
+		}
+
+		dst_val = MEMORY[addr];
+		res = dst_val + src_val;
+		MEMORY[addr] = res & 0xFF;
+
+		update_f8(r, dst_val, src_val, res);
+	}
+}
 
 void
 init_handles ()
@@ -92,7 +286,7 @@ dos_sys_read INT21 (REGS *r)
 	r->AL = bytes_read;
 }
 
-
+/*
 HANDLE DOS_SYSCALL(0x3D)
 dos_sys_open INT21 (REGS *r)
 {
@@ -144,9 +338,10 @@ dos_sys_readf INT21 (REGS *r)
 	int n = read(fd, &MEMORY[addr], r->CX);
 
 	r->AX = n;
-	if (n < 0) SET_CF(r);
+	if (n < 0) (r);
 	else       CLEAR_CF(r);
 }
+*/
 
 void DOS_SYSCALL(0x40)
 dos_sys_write INT21 (REGS *r)
@@ -155,21 +350,10 @@ dos_sys_write INT21 (REGS *r)
 	int fd = handles[r->BX];
 	int n = write(fd, &MEMORY[addr], r->CX);
 
-	if (n < 0) {
+	if (n < 0)
 		r->AX = 0;
-		SET_CF(r);
-	}
-	else {
+	else
 		r->AX = n;
-		CLEAR_CF(r);
-	}
-}
-
-void DOS_SYSCALL(0x4C)
-dos_sys_exit INT21 (REGS *r)
-{
-	ERRORLEVEL = r->AL;
-	exit(ERRORLEVEL);
 }
 
 void
@@ -180,11 +364,12 @@ int86x (REGS *r)
 	case 0x02: dos_sys_putchar(r); break;
 	case 0x09: dos_sys_print  (r); break;
 	case 0x0A: dos_sys_read   (r); break;
+	/*
 	case 0x3D: dos_sys_open   (r); break;
 	case 0x3E: dos_sys_close  (r); break;
 	case 0x3F: dos_sys_readf  (r); break;
+	*/
 	case 0x40: dos_sys_write  (r); break;
-	case 0x4C: dos_sys_exit   (r); break;
 	default: printf("INT21h, AH=%02X not implemented.\n", r->AH);
 	}
 }
@@ -192,12 +377,11 @@ int86x (REGS *r)
 void
 runcom (REGS *r, int fd)
 {
-	BYTE ch, ch2;
-	DWORD filesz, ipidx;
-	filesz = read(fd, &MEMORY[PRG_START], MEM_MAX - PRG_START);
-	filesz += PRG_START;
+	BYTE ch, ch2, modrm, reg, rm, *src, *dst;
+	WORD *ipidx;
+	int rret = read(fd, &MEMORY[PRG_START], MEM_MAX - PRG_START);
 
-	if (filesz <= 0) {
+	if (rret == -1) {
 		perror("read");
 		return;
 	}
@@ -206,40 +390,42 @@ runcom (REGS *r, int fd)
 	r->ES = r->SS = 0;
 	r->SP = MEM_MAX - 2;
 	r->IP = PRG_START;
-	ipidx = r->IP;
+	ipidx = &r->IP;
 
-	while (ipidx < filesz) {
-		ch = MEMORY[ipidx++];
+	while (true) {
+		ch = MEMORY[(*ipidx)++];
 
 		switch (ch) {
+		/* add %r8, $imm/r8 */
+		case 0x00:
+			exec_add_r8(r, ipidx);
+			break;
+		/* mov %r8, %r8 */
+		case 0x88:
+			modrm = MEMORY[(*ipidx)++];
+			reg   = (modrm >> 3) & 0x7;
+			rm    = modrm & 0x7;
+			src   = get_r8(r, reg);
+			dst   = get_r8(r, rm);
+			*dst = *src;
+			break;
 		/* mov $imm16, %dx */
 		case 0xBA:
-			if (ipidx + 1 >= filesz) {
-				puts("Not enough arguments for 0xBA");
-				return;
-			}
-			r->DX = MEMORY[ipidx] | (MEMORY[ipidx + 1] << 8);
-			ipidx += 2;
+			r->DX = MEMORY[(*ipidx)] | (MEMORY[(*ipidx) + 1] << 8);
+			(*ipidx) += 2;
 			break;
 		/* mov $imm8, %ah */
 		case 0xB4:
-			if (ipidx + 1 >= filesz) {
-				puts("Not enough arguments for 0xB4");
-				return;
-			}
-			r->AH = MEMORY[ipidx++];
+			r->AH = MEMORY[(*ipidx)++];
 			break;
 		/* int $imm8 */
 		case 0xCD:
-			if (ipidx + 1 >= filesz) {
-				puts("Not enough arguments for 0xCD");
-				return;
-			}
-			ch2 = MEMORY[ipidx++];
+			ch2 = MEMORY[(*ipidx)++];
 			switch (ch2) {
 			case 0x20:
 				return;
 			case 0x21:
+				if (r->AH == 0x4C) return;
 				int86x(r);
 				break;
 			default:
@@ -258,12 +444,17 @@ runcom (REGS *r, int fd)
 			newip = MEMORY[r->SP] | (MEMORY[r->SP + 1] << 8);
 			r->SP += 2;
 			r->IP = newip;
-			ipidx = r->IP;
+			(*ipidx) = r->IP;
 
 			return;
 		}
+		/* jmp $imm8 */
+		case 0xEB:
+			   (*ipidx) = MEMORY[(*ipidx) + 1];
+			   break;
 		default:
-			printf("Unhandled opcode: %02X", ch);
+			printf("Unhandled opcode: 0x%02X", ch);
+			return;
 		}
 	}
 }
