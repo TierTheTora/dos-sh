@@ -86,7 +86,7 @@ exec_noext (const char *cmd, const char *ext[], int ext_cnt)
 void
 dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 {
-	const char *ext[] = { "", ".com", ".bat" };
+	const char *ext[] = { ".com", ".bat", "" };
 	int ext_cnt = 3;
 	
 	if (cmd == NULL) return;

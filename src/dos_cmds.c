@@ -50,7 +50,7 @@ dos_box (char **argv, int argc)
 void
 dos_call (char **argv, int argc)
 {
-	const char *ext[] = { "", ".bat" };
+	const char *ext[] = { ".bat", "" };
 	int ext_cnt = 2;
 
 	if (argc < 1) {
