@@ -1,7 +1,9 @@
 #include "headers/dos_cmds.h"
+#include "headers/dos_exec.h"
 #include "headers/dos_const.h"
 #include "headers/print.h"
 #include "headers/conio.h"
+
 #include <linux/limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -43,6 +45,20 @@ dos_box (char **argv, int argc)
 	msg[msgidx] = 0;
 
 	print_box(msg);
+}
+
+void
+dos_call (char **argv, int argc)
+{
+	const char *ext[] = { "", ".bat" };
+	int ext_cnt = 2;
+
+	if (argc < 1) {
+		puts("The syntax of the command is incorrect.\n");
+		return;
+	}
+
+	exec_noext(argv[0], ext, ext_cnt);
 }
 
 void
@@ -610,6 +626,7 @@ dos_help (char **argv, int argc)
 	all = false;
 
 	puts("<BOX     > Display messages in a box.\n"
+	     "<CALL    > Start a batch file within another batch file.\n"
 	     "<CD      > Displays/changes the current directory.\n"
 	     "<CHDIR   > Displays/changes the current directory.\n"
 	     "<CLS     > Clear screen.\n"
@@ -669,7 +686,7 @@ dos_mkdir (char **argv, int argc)
 void
 dos_pause ()
 {
-	puts("Press any key to continue.");
+	puts("Press any key to continue . . .");
 	(void)getch();
 }
 

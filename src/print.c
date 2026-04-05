@@ -175,7 +175,7 @@ print_readable_bytes (size_t bytes)
 int
 readprompt (char **buffer, int *bytes, bool *buf_freeable)
 {
-	int chptr, bytes_read;
+	int chptr, bytes_read, move_back;
 	char ch, seq1, seq2;
 	chptr = bytes_read = 0;
 
@@ -205,7 +205,8 @@ readprompt (char **buffer, int *bytes, bool *buf_freeable)
 			}
 			continue;
 		}
-
+		if (ch == '\t')
+			ch = ' ';
 		if (ch == K_BACKSP) {
 			if (chptr > 0) {
 				memmove(&(*buffer)[chptr - 1],
@@ -225,7 +226,7 @@ readprompt (char **buffer, int *bytes, bool *buf_freeable)
 
 				putchar(' ');
 
-				int move_back = bytes_read - chptr + 1;
+				move_back = bytes_read - chptr + 1;
 
 				if (move_back > 0) {
 					printf("\033[%dD", move_back);
@@ -233,7 +234,6 @@ readprompt (char **buffer, int *bytes, bool *buf_freeable)
 			}
 			continue;
 		}
-
 		if (bytes_read + 2 >= (*bytes)) {
 			(*bytes) *= 2;
 			char *tmp = realloc((*buffer),
@@ -247,7 +247,6 @@ readprompt (char **buffer, int *bytes, bool *buf_freeable)
 
 			(*buffer) = tmp;
 		}
-
 		if (ch == '\n') {
 			putchar('\n');
 			break;
@@ -275,7 +274,7 @@ readprompt (char **buffer, int *bytes, bool *buf_freeable)
 int
 dos_read (char *buffer, size_t max)
 {
-	int chptr, bytes_read;
+	int chptr, bytes_read, move_back;
 	char ch, seq1, seq2;
 	chptr = bytes_read = 0;
 
@@ -305,7 +304,8 @@ dos_read (char *buffer, size_t max)
 			}
 			continue;
 		}
-
+		if (ch == '\t')
+			ch = ' ';
 		if (ch == K_BACKSP) {
 			if (chptr > 0) {
 				memmove(&buffer[chptr - 1],
@@ -325,7 +325,7 @@ dos_read (char *buffer, size_t max)
 
 				putchar(' ');
 
-				int move_back = bytes_read - chptr + 1;
+				move_back = bytes_read - chptr + 1;
 
 				if (move_back > 0) {
 					printf("\033[%dD", move_back);
@@ -333,12 +333,10 @@ dos_read (char *buffer, size_t max)
 			}
 			continue;
 		}
-
 		if ((size_t)(bytes_read) + 2 >= max) {
 			while ((ch = getch()) != '\n');
 			return 0;
 		}
-
 		if (ch == '\n')
 			break;
 

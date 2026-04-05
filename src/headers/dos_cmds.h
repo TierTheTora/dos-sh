@@ -7,6 +7,8 @@ extern bool echo;
 
 void dos_box
 	(char **argv, int argc);
+void dos_call
+	(char **argv, int argc);
 void dos_cd
 	(char **argv, int argc);
 void dos_cls

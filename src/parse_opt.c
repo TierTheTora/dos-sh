@@ -8,9 +8,9 @@
 struct opt
 parse_cmd (const char *s)
 {
-	char *tok, **argv, *dest, **tmp;
+	char *tok, **argv, *dest, **tmp, *trimmed;
 	const char *p;
-	int argc, cap;
+	int argc, cap, toklen;
 	struct opt ret;
 
 	p = s;
@@ -57,6 +57,15 @@ parse_cmd (const char *s)
 		}
 
 		*dest = 0;
+		toklen = dest - tok;
+		trimmed = malloc(toklen + 1);
+
+		if (trimmed != NULL) {
+			strcpy(trimmed, tok);
+			free(tok);
+
+			tok = trimmed;
+		}
 
 		if (argc >= cap - 1) {
 			cap *= 2;

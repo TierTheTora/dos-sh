@@ -12,9 +12,83 @@
 #include <dirent.h>
 #include <stdlib.h>
 
+int
+exec_noext (const char *cmd, const char *ext[], int ext_cnt)
+{
+	int fd, i;
+	REGS r;
+	DIR *dir;
+	struct dirent *ent;
+	char *fext;
+	char cmd2[strlen(cmd) + 10], *path, *last_slash,
+	     *base_cmd, name[strlen(cmd) + 10];
+
+	undosify_dir((char *)cmd);
+	strcpy(cmd2, cmd);
+
+	path = strdup(cmd);
+	last_slash = strrchr(path, '/');
+
+	if (last_slash != NULL) {
+		*last_slash = 0;
+		base_cmd = last_slash + 1;
+	}
+	else {
+		strcpy(path, ".");
+		base_cmd = (char *)cmd;
+	}
+	
+	fd = -1;
+	dir = opendir(path);;
+
+	if (dir) {
+		while ((ent = readdir(dir)) != NULL) {
+			for (i = 0; i < ext_cnt; i++) {
+			snprintf(name, sizeof(name),
+				 "%s%s",
+				 base_cmd, ext[i]);
+
+			if (strcasecmp(ent->d_name,
+				       name) == 0) {
+				snprintf(cmd2, sizeof(cmd2),
+					 "%s/%s",
+					 path, ent->d_name);
+
+				fd = open(cmd2, O_RDONLY);
+
+				if (fd != -1) break;
+			}
+			}
+			if (fd != -1) break;
+		}
+		closedir(dir);
+	}
+	if (fd == -1) {
+		illegal:
+		dosify_dir((char *)cmd);
+		printf("Illegal command: %s.\n", cmd);
+		return -1;
+	}
+
+	fext = strrchr(cmd2, '.');
+	if (fext && strcasecmp(fext, ".com") == 0)
+		runcom(&r, fd);
+	else if (fext && strcasecmp(fext, ".bat") == 0)
+		runbat(fd);
+	else goto illegal;
+
+	close(fd);
+	free(path);
+
+	return 0;
+}
+
 void
 dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 {
+	const char *ext[] = { "", ".com", ".bat" };
+	int ext_cnt = 3;
+	
 	if (cmd == NULL) return;
 	if (*cmd == '@') {
 		cmd++;
@@ -23,6 +97,9 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 
 	if (strcasecmp(cmd, "box") == 0)
 		dos_box(argv, argc);
+
+	if (strcasecmp(cmd, "call") == 0)
+		dos_call(argv, argc);
 
 	else if (strcasecmp(cmd, "cd") == 0)
 		dos_cd(argv, argc);
@@ -88,77 +165,9 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	else if (strcasecmp(cmd, "ver") == 0)
 		dos_ver();
 
-	else {
-		int fd, i;
-		REGS r;
-		DIR *dir;
-		struct dirent *ent;
-		char *fext;
-		const char *ext[] = { "", ".com", ".bat" };
-		const int ext_cnt = 3;
-		char cmd2[strlen(cmd) + 10], *path, *last_slash,
-		     *base_cmd, name[strlen(cmd) + 10];
+	else
+		exec_noext(cmd, ext, ext_cnt);
 
-		undosify_dir((char *)cmd);
-		strcpy(cmd2, cmd);
-
-		path = strdup(cmd);
-		last_slash = strrchr(path, '/');
-
-		if (last_slash != NULL) {
-			*last_slash = 0;
-			base_cmd = last_slash + 1;
-		}
-		else {
-			strcpy(path, ".");
-			base_cmd = (char *)cmd;
-		}
-		
-		fd = -1;
-		dir = opendir(path);;
-
-		if (dir) {
-			while ((ent = readdir(dir)) != NULL) {
-				for (i = 0; i < ext_cnt; i++) {
-				snprintf(name, sizeof(name),
-					 "%s%s",
-					 base_cmd, ext[i]);
-
-				if (strcasecmp(ent->d_name,
-				               name) == 0) {
-					snprintf(cmd2, sizeof(cmd2),
-					         "%s/%s",
-					         path, ent->d_name);
-
-					fd = open(cmd2, O_RDONLY);
-
-					if (fd != -1) break;
-				}
-				}
-				if (fd != -1) break;
-			}
-			closedir(dir);
-		}
-
-		if (fd == -1) {
-			illegal:
-			dosify_dir((char *)cmd);
-			printf("Illegal command: %s.\n", cmd);
-			goto final;
-		}
-
-		fext = strrchr(cmd2, '.');
-		if (fext && strcasecmp(fext, ".com") == 0)
-			runcom(&r, fd);
-		else if (fext && strcasecmp(fext, ".bat") == 0)
-			runbat(fd);
-		else goto illegal;
-
-		close(fd);
-		free(path);
-	}
-
-	final:
 	if (echo && !isbatfile)
 		putchar('\n');
 }

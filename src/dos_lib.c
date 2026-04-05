@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <string.h>
+#include <strings.h>
 #include <termios.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -722,12 +723,14 @@ runcom (REGS *r, int fd)
 void
 runbat (int fd)
 {
-	char *line, *tmpbuf, *tok;
-	int sz, ch, bytes;
+	char *line, *tmpbuf, *tok, *cmd, *savptr = NULL;
+	int sz, ch, bytes, i;
 	struct opt arg;
+	bool local_echo;
 	sz = 256;
 	ch = bytes = 0;
 	line = calloc(sz, sizeof(char));
+	local_echo = true;
 
 	if (line == NULL) {
 		perror("calloc");
@@ -752,15 +755,53 @@ runbat (int fd)
 	}
 
 	line[bytes] = 0;
-	tok = strtok(line, "\r\n");
+	tok = strtok_r(line, "\r\n",  &savptr);
 
 	while (tok != NULL) {
 		arg = parse_cmd(tok);
-		if (strcasecmp(arg.argv[0], "exit") == 0)
+
+		if (arg.argv == NULL) {
+			tok = strtok_r(NULL, "\r\n", &savptr);
+			continue;
+		}
+		if (arg.argc < 1) goto next;
+
+		cmd = arg.argv[0];
+
+		if (cmd[0] == '@')
+			cmd++;
+		if ((strcasecmp(cmd, "echo") == 0
+		&& (arg.argc > 1))
+		&& ((strcasecmp(arg.argv[1], "on") == 0)
+		|| (strcasecmp(arg.argv[1], "off") == 0))) {
+			if (strcasecmp(arg.argv[1], "on") == 0)
+				local_echo = true;
+			else
+				local_echo = false;
+			goto next;
+		}
+		if (local_echo && strlen(cmd) > 0
+		&& (strcasecmp(cmd, "rem") != 0)) {
+			print_path();
+
+			for (i = 0; i < arg.argc; i++) {
+				printf("%s ", arg.argv[i]);
+			}
+
+			putchar('\n');
+		}
+		if (strcasecmp(cmd, "exit") == 0)
 			break;
-		dos_exec(arg.argv[0], &arg.argv[1],
+
+		dos_exec(cmd, &arg.argv[1],
 		         arg.argc - 1, true);
-		tok = strtok(NULL, "\r\n");
+
+		next:
+		for (i = 0; i < arg.argc; i++)
+			free(arg.argv[i]);
+		free(arg.argv);
+
+		tok = strtok_r(NULL, "\r\n", &savptr);
 	}
 
 	free(line);
