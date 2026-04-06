@@ -217,20 +217,20 @@ readprompt (char **buffer, int *bytes, bool *buf_freeable)
 				chptr--;
 				(*buffer)[bytes_read] = 0;
 
+				move_back = bytes_read - chptr + 1;
+
 				putchar('\b');
+				putchar(' ');
+
+				if (move_back > 0)
+					printf("\033[%dD", move_back);
+
 				if (bytes_read - chptr > 0) {
 					write(STDOUT_FILENO,
 					      &(*buffer)[chptr],
 					      bytes_read - chptr);
 				}
 
-				putchar(' ');
-
-				move_back = bytes_read - chptr + 1;
-
-				if (move_back > 0) {
-					printf("\033[%dD", move_back);
-				}
 			}
 			continue;
 		}

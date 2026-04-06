@@ -171,8 +171,6 @@ calc_ea (REGS *r, BYTE modrm, WORD *ipidx)
 		return 0;
 	}
 
-	//printf("calc_ea: mod=%02X rm=%02X ipidx=%04X\n", mod, rm, *ipidx);
-
 	switch (rm) {
 	case 0: addr = r->BX + r->SI; break;
 	case 1: addr = r->BX + r->DI; break;
@@ -254,19 +252,8 @@ exec_mov_r16 (REGS *r, WORD *ipidx)
 	rm    = modrm & 0x07;
 	dst   = get_r16(r, reg);
 
-	if (!dst) {
-		puts("Illegal source register");
-		return;
-	}
-
 	if (mod == 3) {
 		src = get_r16(r, rm);
-
-		if (!src) {
-			puts("Illegal destination register");
-			return;
-		}
-
 		*dst = *src;
 	}
 	else {
@@ -294,19 +281,8 @@ exec_mov_r8 (REGS *r, WORD *ipidx)
 	rm    = modrm & 0x07;
 	dst   = get_r8(r, reg);
 
-	if (!dst) {
-		puts("Illegal source register");
-		return;
-	}
-
 	if (mod == 3) {
 		src = get_r8(r, rm);
-
-		if (!src) {
-			puts("Illegal destination register");
-			return;
-		}
-
 		*dst = *src;
 	}
 	else {
@@ -318,6 +294,103 @@ exec_mov_r8 (REGS *r, WORD *ipidx)
 		}
 
 		*dst = MEMORY[addr];
+	}
+}
+
+void
+exec_80 (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm, val, *r8, imm;
+	WORD addr, res;
+
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+
+	switch (reg) {
+	/* cmp */
+	case 7:
+		if (mod == 3) {
+			r8 = get_r8(r, rm);
+			val = *r8;
+		}
+		else {
+			addr = calc_ea(r, modrm, ipidx);
+			val = MEMORY[addr];
+		}
+
+		imm = MEMORY[(*ipidx)++];
+		res = val - imm;
+
+		update_f8(r, val, imm, res);
+
+		break;
+	}
+}
+
+void
+exec_83 (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm;
+	int8_t imm8;
+	DWORD addr;
+	WORD *r16, val, imm16, res;
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+
+	switch (reg) {
+	/* cmp */
+	case 7:
+		if (mod == 3) {
+			r16 = get_r16(r, rm);
+			val = *r16;
+		}
+		else {
+			addr = calc_ea(r, modrm, ipidx);
+			val  = (MEMORY[addr])
+			     | (MEMORY[addr + 1] << 8);
+		}
+
+		imm8  = MEMORY[(*ipidx)++];
+		imm16 = (int8_t)imm8;
+		res = val - imm16;
+
+		update_f16(r, val, imm16, res);
+
+		break;
+	}
+}
+
+void
+exec_f6 (REGS *r, WORD *ipidx)
+{
+	BYTE modrm, mod, reg, rm, val, *r8;
+	WORD addr, acpy;
+
+	modrm = MEMORY[(*ipidx)++];
+	mod   = (modrm >> 6) & 0x03;
+	reg   = (modrm >> 3) & 0x07;
+	rm    = modrm & 0x07;
+
+	switch (reg) {
+	case 6:
+		if (mod == 3) {
+			r8 = get_r8(r, rm);
+			val = *r8;
+		}
+		else {
+			addr = calc_ea(r, modrm, ipidx);
+			val = MEMORY[addr];
+		}
+
+		acpy = r->AH;
+		r->AL = acpy / val;
+		r->AH = acpy % val;
+
+		break;
 	}
 }
 
@@ -383,42 +456,6 @@ exec_ff (REGS *r, WORD *ipidx)
 			MEMORY[addr]     = val & 0xFF;
 			MEMORY[addr + 1] = (val >> 8) & 0xFF;
 		}
-		break;
-	}
-}
-
-void
-exec_83 (REGS *r, WORD *ipidx)
-{
-	BYTE modrm, mod, reg, rm;
-	int8_t imm8;
-	DWORD addr;
-	WORD *r16, val, imm16, res;
-	modrm = MEMORY[(*ipidx)++];
-	mod   = (modrm >> 6) & 0x03;
-	reg   = (modrm >> 3) & 0x07;
-	rm    = modrm & 0x07;
-
-	switch (reg) {
-	case 7:
-		if (mod == 3) {
-			r16 = get_r16(r, rm);
-			val = *r16;
-		}
-		else {
-			addr = calc_ea(r, modrm, ipidx);
-			val  = (MEMORY[addr])
-			     | (MEMORY[addr + 1] << 8);
-		}
-
-		imm8  = MEMORY[(*ipidx)++];
-		imm16 = (int8_t)imm8;
-
-		res = val - imm16;
-		if (res == 0) r->flags |= ZF;
-
-		update_f16(r, val, imm16, res);
-
 		break;
 	}
 }
@@ -593,8 +630,8 @@ int86x (REGS *r)
 void
 runcom (REGS *r, int fd)
 {
-	BYTE ch, ch2, mod, reg, rm, *src, *dst, off;
-	WORD *ipidx, off16, seg16;
+	BYTE ch, ch2, mod, reg, rm, *src, *dst, off, modrm;
+	WORD *ipidx, off16, seg16, res, val, addr;
 	int rret = read(fd, &MEMORY[PRG_START], MEM_MAX - PRG_START);
 
 	if (rret == -1) {
@@ -616,12 +653,151 @@ runcom (REGS *r, int fd)
 		case 0x00:
 			exec_add_r8(r, ipidx);
 			break;
+		/* cmp $imm/r8 %r8 */
+		case 0x38:
+			modrm = MEMORY[(*ipidx)++];
+			mod   = (modrm >> 6) & 0x3;
+			reg   = (modrm >> 3) & 0x7;
+			rm    = modrm & 0x7;
+
+			if (mod == 3) {
+				dst = get_r8(r, rm);
+				src = get_r8(r, reg);
+				val = *dst;
+			}
+			else {
+				addr = calc_ea(r, modrm, ipidx);
+				val = MEMORY[addr];
+				src = get_r8(r, reg);
+			}
+
+			res = val - *src;
+
+			update_f8(r, val, *src, res);
+			break;
+		/* cmp %al, $imm8 */
+		case 0x3C:
+			val = MEMORY[(*ipidx)++];
+			res = r->AL - val;
+
+			update_f8(r, r->AL, val, res);
+			break;
+		/* jo $imm8 */
+		case 0x70:
+			off = MEMORY[(*ipidx)++];
+
+			if (r->flags & OF)
+				(*ipidx) += (signed char)off;
+			break;
+		/* jno $imm8 */
+		case 0x71:
+			off = MEMORY[(*ipidx)++];
+
+			if (!(r->flags & OF))
+				(*ipidx) += (signed char)off;
+			break;
+		/* jb/jnae/jc $imm8 */
+		case 0x72:
+			off = MEMORY[(*ipidx)++];
+
+			if (r->flags & CF)
+				(*ipidx) += (signed char)off;
+			break;
+		/* jnb/jae/jnc $imm8 */
+		case 0x73:
+			off = MEMORY[(*ipidx)++];
+
+			if (!(r->flags & CF))
+				(*ipidx) += (signed char)off;
+			break;
+		/* je/jz $imm8 */
+		case 0x74:
+			off = MEMORY[(*ipidx)++];
+
+			if (r->flags & ZF)
+				(*ipidx) += (signed char)off;
+			break;
 		/* jne/jnz $imm8 */
 		case 0x75:
 			off = MEMORY[(*ipidx)++];
 
 			if (!(r->flags & ZF))
 				(*ipidx) += (signed char)off;
+			break;
+		/* jbe/jna $imm8 */
+		case 0x76:
+			off = MEMORY[(*ipidx)++];
+
+			if (r->flags & ZF || r->flags & CF)
+				(*ipidx) += (signed char)off;
+			break;
+		/* jnbe/ja $imm8 */
+		case 0x77:
+			off = MEMORY[(*ipidx)++];
+
+			if (!(r->flags & ZF) && !(r->flags & CF))
+				(*ipidx) += (signed char)off;
+			break;
+		/* js $imm8 */
+		case 0x78:
+			off = MEMORY[(*ipidx)++];
+
+			if (r->flags & SF)
+				(*ipidx) += (signed char)off;
+			break;
+		/* jns $imm8 */
+		case 0x79:
+			off = MEMORY[(*ipidx)++];
+
+			if (!(r->flags & SF))
+				(*ipidx) += (signed char)off;
+			break;
+		/* jp/jpe $imm8 */
+		case 0x7a:
+			off = MEMORY[(*ipidx)++];
+
+			if (r->flags & PF)
+				(*ipidx) += (signed char)off;
+			break;
+		/* jnp/jpo $imm8 */
+		case 0x7b:
+			off = MEMORY[(*ipidx)++];
+
+			if (!(r->flags & PF))
+				(*ipidx) += (signed char)off;
+			break;
+		/* jl/jnge $imm8 */
+		case 0x7c:
+			off = MEMORY[(*ipidx)++];
+
+			if ((r->flags & SF) != (r->flags & OF))
+				(*ipidx) += (signed char)off;
+			break;
+		/* jnl/jge $imm8 */
+		case 0x7d:
+			off = MEMORY[(*ipidx)++];
+
+			if ((r->flags & SF) == (r->flags & OF))
+				(*ipidx) += (signed char)off;
+			break;
+		/* jle/jng $imm8 */
+		case 0x7e:
+			off = MEMORY[(*ipidx)++];
+
+			if ((r->flags & ZF) || ((r->flags & SF)
+			 != (r->flags & OF)))
+				(*ipidx) += (signed char)off;
+			break;
+		/* jnle/jg $imm8 */
+		case 0x7f:
+			off = MEMORY[(*ipidx)++];
+
+			if (!(r->flags & ZF) && ((r->flags & SF)
+			  == (r->flags & OF)))
+				(*ipidx) += (signed char)off;
+			break;
+		case 0x80:
+			exec_80(r, ipidx);
 			break;
 		case 0x83:
 			exec_83(r, ipidx);
@@ -643,17 +819,36 @@ runcom (REGS *r, int fd)
 		case 0x8B:
 			exec_mov_r16(r, ipidx);
 			break;
+		/* nop */
 		case 0x90:
 			(*ipidx)++;
+			break;
+		/* mov $moffs8, %al */
+		case 0xA0:
+			off16 = MEMORY[(*ipidx)] | (MEMORY[(*ipidx) + 1] << 8);
+			r->AL = MEMORY[off16];
+			(*ipidx) += 2;
+			break;
+		/* mov $imm8, %cl */
+		case 0xB1:
+			r->CL = MEMORY[(*ipidx)++];
+			break;
+		/* mov $imm8, %dl */
+		case 0xB2:
+			r->DL = MEMORY[(*ipidx)++];
+			break;
+		/* mov $imm8, %bl */
+		case 0xB3:
+			r->BL = MEMORY[(*ipidx)++];
+			break;
+		/* mov $imm8, %ah */
+		case 0xB4:
+			r->AH = MEMORY[(*ipidx)++];
 			break;
 		/* mov $imm16, %dx */
 		case 0xBA:
 			r->DX = MEMORY[(*ipidx)] | (MEMORY[(*ipidx) + 1] << 8);
 			(*ipidx) += 2;
-			break;
-		/* mov $imm8, %ah */
-		case 0xB4:
-			r->AH = MEMORY[(*ipidx)++];
 			break;
 		/* int $imm8 */
 		case 0xCD:
@@ -706,6 +901,9 @@ runcom (REGS *r, int fd)
 			r->CS = seg16;
 			r->IP = off16;
 			(*ipidx) = SEG_OFF(seg16, off16);
+			break;
+		case 0xF6:
+			exec_f6(r, ipidx);
 			break;
 		case 0xFF:
 			exec_ff(r, ipidx);

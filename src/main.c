@@ -12,12 +12,17 @@
 #include <stdbool.h>
 #include <termios.h>
 #include <locale.h>
+#include <pthread.h>
 
 char *buffer;
 char *tmpbuf;
 bool buf_freeable;
 struct opt args;
 struct termios oldt;
+int tickcount;
+bool progend;
+pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_t tickthread;
 
 int
 init_term ()
@@ -46,10 +51,46 @@ restore_term ()
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 }
 
+void *
+tick (void *arg)
+{
+	(void)arg;
+
+	while (true) {
+		pthread_mutex_lock(&lock);
+
+		if (progend) {
+			pthread_mutex_unlock(&lock);
+
+			break;
+		}
+		tickcount++;
+
+		if (MEMORY != NULL) {
+			MEMORY[0x46C] = (tickcount) & 0xFF;
+			MEMORY[0x46D] = (tickcount >> 8) & 0xFF;
+			MEMORY[0x46E] = (tickcount >> 16) & 0xFF;
+			MEMORY[0x46F] = (tickcount >> 24) & 0xFF;
+		}
+
+		pthread_mutex_unlock(&lock);
+		usleep(50000);
+	}
+
+	return NULL;
+}
+
 void
 kill_dos ()
 {
 	int i;
+
+	pthread_mutex_lock(&lock);
+
+	progend = true;
+
+	pthread_mutex_unlock(&lock);
+	pthread_join(tickthread, NULL);
 
 	if (buf_freeable == true)
 		free(buffer);
@@ -67,16 +108,24 @@ kill_dos ()
 int
 main ()
 {
-	int bytes, bytes_read;
+	int bytes, bytes_read, rc;
 	bytes = 256;
 	buffer = malloc(bytes * sizeof(char));
+	tickcount = 0;
+	progend = false;
+	rc = pthread_create(&tickthread, NULL, &tick, NULL);
+
+	if (rc != 0) {
+		perror("pthread_create");
+		return 1;
+	}
 
 	dos_cls();
 
 	if (buffer == NULL) {
 		buf_freeable = false;
 		perror("malloc");
-		abort();
+		return 1;
 	}
 
 	if (init_dos() != 0) return 1;
@@ -92,7 +141,6 @@ main ()
 	print_box("Welcome to DOS in the linux terminal!\n"
 	          "Use \"HELP\" for help.");
 
-	
 	for (;;) {
 		if (echo) print_path();
 		buffer[0] = 0;

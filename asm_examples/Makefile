@@ -2,12 +2,14 @@ AS=nasm
 
 all: build
 
-build_prog: read_input.asm hello.asm wait.asm get.asm print_bytes.asm
+build_prog: read_input.asm hello.asm wait.asm get.asm \
+            print_bytes.asm rps.asm
 	$(AS) read_input.asm -o build/read_input.com
 	$(AS) hello.asm -o build/hello.com
 	$(AS) wait.asm -o build/wait.com
 	$(AS) get.asm -o build/get.com
 	$(AS) print_bytes.asm -o build/print_bytes.com
+	$(AS) rps.asm -o build/rps.com
 
 
 build_dir:
