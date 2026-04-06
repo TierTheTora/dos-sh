@@ -4,6 +4,7 @@
 #include "headers/print.h"
 #include "headers/conio.h"
 
+#include <ctype.h>
 #include <linux/limits.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -26,7 +27,6 @@ void
 dos_box (char **argv, int argc)
 {
 	int i, msgsz, msgidx, j;
-
 	msgsz = msgidx = 0;
 
 	for (i = 0; i < argc; i++) {
@@ -42,6 +42,7 @@ dos_box (char **argv, int argc)
 		if (i < argc - 1)
 			msg[msgidx++] = ' ';
 	}
+
 	msg[msgidx] = 0;
 
 	print_box(msg);
@@ -59,6 +60,42 @@ dos_call (char **argv, int argc)
 	}
 
 	exec_noext(argv[0], ext, ext_cnt);
+}
+
+int
+nibble_to_int (char nibble)
+{
+	nibble = tolower((int)nibble);
+
+	if (nibble >= '0' && nibble <= '9')
+		return nibble - '0';
+	if (nibble >= 'a' && nibble <= 'f')
+		return nibble - 'a' + 10;
+	return -1;
+}
+
+void
+dos_color (char **argv, int argc)
+{
+	/* cant change the whole color of the terminal in linux */
+	int n1, n2;
+
+	if (argc != 1) {
+		wrong_syntax:
+		puts("The syntax of the command is incorrect.\n");
+		return;
+	}
+	if (strlen(argv[0]) != 2)
+		goto wrong_syntax;
+
+	n1 = nibble_to_int((int)argv[0][0]);
+	n2 = nibble_to_int((int)argv[0][1]);
+
+	if (n1 == -1 || n2 == -1)
+		goto wrong_syntax;
+
+	printf("\033[38;5;%dm\033[48;5;%dm", n1, n2);
+	fflush(stdout);
 }
 
 void
@@ -630,6 +667,7 @@ dos_help (char **argv, int argc)
 	     "<CD      > Displays/changes the current directory.\n"
 	     "<CHDIR   > Displays/changes the current directory.\n"
 	     "<CLS     > Clear screen.\n"
+	     "<COLOR   > Set the terminal color.\n"
 	     "<COPY    > Copy file.\n"
 	     "<DEL     > Removes one or more files.\n"
 	     "<DELETE  > Removes one or more files.\n"

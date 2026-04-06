@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "dos_const.h"
 
-#define SEG_OFF(seg, off) (((seg) << 4) + (off))
+#define SEG_OFF(seg, off) ((WORD)((seg) << 4) + (off))
 
 #define DOS_SYSCALL(num)
 #define INT21
@@ -49,7 +49,7 @@ void init_handles
 	();
 HANDLE new_handle
 	();
-void int86x
+void int21h
 	(REGS *r);
 void runcom
 	(REGS *r, int fd);

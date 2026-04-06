@@ -109,6 +109,9 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	else if (strcasecmp(cmd, "cls") == 0)
 		dos_cls();
 
+	else if (strcasecmp(cmd, "color") == 0)
+		dos_color(argv, argc);
+
 	else if (strcasecmp(cmd, "copy") == 0)
 		dos_copy(argv, argc);
 

@@ -38,14 +38,14 @@ int readprompt
 int dos_read
 	(char *buffer, size_t max);
 
-static inline int
-print (char *msg)
+static inline ssize_t
+print (const char *msg)
 {
 	return write(STDOUT_FILENO, msg, strlen(msg));
 }
 
-static inline int
-fprint (char *msg, int fd)
+static inline ssize_t
+fprint (const char *msg, int fd)
 {
 	return write(fd, msg, strlen(msg));
 }

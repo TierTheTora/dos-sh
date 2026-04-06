@@ -33,7 +33,7 @@ init_term ()
 		return -1;
 
 	newt = oldt;
-	newt.c_lflag &= ~(ICANON | ECHO | ISIG);
+	newt.c_lflag &= (tcflag_t)(~(ICANON | ECHO | ISIG));
 	newt.c_cc[VMIN] = 1;
 	newt.c_cc[VTIME] = 0;
 
@@ -67,10 +67,10 @@ tick (void *arg)
 		tickcount++;
 
 		if (MEMORY != NULL) {
-			MEMORY[0x46C] = (tickcount) & 0xFF;
-			MEMORY[0x46D] = (tickcount >> 8) & 0xFF;
-			MEMORY[0x46E] = (tickcount >> 16) & 0xFF;
-			MEMORY[0x46F] = (tickcount >> 24) & 0xFF;
+			MEMORY[0x46C] = (BYTE)(tickcount) & 0xFF;
+			MEMORY[0x46D] = (BYTE)(tickcount >> 8) & 0xFF;
+			MEMORY[0x46E] = (BYTE)(tickcount >> 16) & 0xFF;
+			MEMORY[0x46F] = (BYTE)(tickcount >> 24) & 0xFF;
 		}
 
 		pthread_mutex_unlock(&lock);
@@ -98,7 +98,6 @@ kill_dos ()
 		for (i = 0; i < args.argc; i++)
 			free(args.argv[i]);
 	}
-
 	if (memory_freeable)  free(MEMORY);
 	if (handles_freeable) free(handles);
 
@@ -110,7 +109,7 @@ main ()
 {
 	int bytes, bytes_read, rc;
 	bytes = 256;
-	buffer = malloc(bytes * sizeof(char));
+	buffer = malloc((long unsigned int)bytes * sizeof(char));
 	tickcount = 0;
 	progend = false;
 	rc = pthread_create(&tickthread, NULL, &tick, NULL);
