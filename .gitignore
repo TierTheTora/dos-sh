@@ -1,4 +1,3 @@
 build/
 asm_examples/build/
-battests/
 src/*.bak
