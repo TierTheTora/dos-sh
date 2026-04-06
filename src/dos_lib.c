@@ -137,7 +137,7 @@ init_dos ()
 }
 
 DWORD
-calc_ea (REGS *r, BYTE modrm, DWORD *ipidx)
+calc_ea (REGS *r, BYTE modrm, WORD *ipidx)
 {
 	BYTE mod, rm;
 	WORD disp, addr;
@@ -190,7 +190,7 @@ calc_ea (REGS *r, BYTE modrm, DWORD *ipidx)
 }
 
 void
-exec_add_r8 (REGS *r, DWORD *ipidx)
+exec_add_r8 (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm, *dst, *src, src_val, dst_val;
 	WORD res;
@@ -239,7 +239,7 @@ exec_add_r8 (REGS *r, DWORD *ipidx)
 }
 
 void
-exec_mov_r16 (REGS *r, DWORD *ipidx)
+exec_mov_r16 (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm;
 	WORD *dst, *src, val;
@@ -269,7 +269,7 @@ exec_mov_r16 (REGS *r, DWORD *ipidx)
 }
 
 void
-exec_mov_r8 (REGS *r, DWORD *ipidx)
+exec_mov_r8 (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm, *dst, *src;
 	DWORD addr;
@@ -297,7 +297,7 @@ exec_mov_r8 (REGS *r, DWORD *ipidx)
 }
 
 void
-exec_80 (REGS *r, DWORD *ipidx)
+exec_80 (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm, val, *r8, imm;
 	WORD addr, res;
@@ -329,7 +329,7 @@ exec_80 (REGS *r, DWORD *ipidx)
 }
 
 void
-exec_83 (REGS *r, DWORD *ipidx)
+exec_83 (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm;
 	int8_t imm8;
@@ -364,7 +364,7 @@ exec_83 (REGS *r, DWORD *ipidx)
 }
 
 void
-exec_f6 (REGS *r, DWORD *ipidx)
+exec_f6 (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm, val, *r8;
 	WORD addr, acpy;
@@ -394,7 +394,7 @@ exec_f6 (REGS *r, DWORD *ipidx)
 }
 
 void
-exec_ff (REGS *r, DWORD *ipidx)
+exec_ff (REGS *r, WORD *ipidx)
 {
 	BYTE modrm, mod, reg, rm;
 	DWORD addr;
@@ -630,7 +630,7 @@ void
 runcom (REGS *r, int fd)
 {
 	BYTE ch, ch2, mod, reg, rm, *src, *dst, off, modrm;
-	DWORD *ipidx, off16, seg16, res, val, addr;
+	WORD *ipidx, off16, seg16, res, val, addr;
 	int rret = read(fd, &MEMORY[PRG_START], MEM_MAX - PRG_START);
 
 	if (rret == -1) {
@@ -642,7 +642,7 @@ runcom (REGS *r, int fd)
 	r->ES = r->SS = 0;
 	r->SP = MEM_MAX - 2;
 	r->IP = PRG_START;
-	ipidx = (DWORD *)&r->IP;
+	ipidx = &r->IP;
 
 	while (true) {
 		ch = MEMORY[(*ipidx)++];
@@ -897,8 +897,8 @@ runcom (REGS *r, int fd)
 			      | (MEMORY[(*ipidx) + 1] << 8);
 			seg16 = (MEMORY[(*ipidx) + 2])
 			      | (MEMORY[(*ipidx) + 3] << 8);
-			r->CS = (WORD)seg16;
-			r->IP = (WORD)off16;
+			r->CS = seg16;
+			r->IP = off16;
 			(*ipidx) = SEG_OFF(seg16, off16);
 			break;
 		case 0xF6:
