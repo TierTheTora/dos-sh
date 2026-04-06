@@ -1,4 +1,5 @@
 #include "headers/dos_lib.h"
+#include "headers/dos_cmds.h"
 #include "headers/dos_const.h"
 #include "headers/print.h"
 #include "headers/conio.h"
@@ -6,6 +7,7 @@
 #include "headers/dos_exec.h"
 
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 #include <strings.h>
@@ -21,6 +23,8 @@ BYTE *MEMORY;
 int ERRORLEVEL = 0;
 BOOL memory_freeable = false;
 BOOL handles_freeable = false;
+label *labels;
+size_t labels_n;
 
 DWORD
 bitsnum (DWORD n)
@@ -918,24 +922,77 @@ runcom (REGS *r, int fd)
 }
 
 void
+gotoline (char *buf, size_t target, char **tok, char **savptr)
+{
+	size_t curline = 0;
+	*savptr = NULL;
+	*tok = strtok_r(buf, "\r\n", savptr);
+	
+	while (*tok != NULL && curline < target) {
+		*tok = strtok_r(NULL, "\r\n", savptr);
+		curline++;
+	}
+	if (*tok != NULL) {
+		*tok = strtok_r(NULL, "\r\n", savptr);
+	}
+}
+
+void
+addlabel (char *label_name, size_t *lbl_cnt, size_t linenum)
+{
+	label *tmp;
+
+	if (dos_goto(label_name) == (size_t)-1) {
+		if (strlen(label_name) >= LABELN_MAX) {
+			printf("Label name exceeds %d"
+			       " character limit.", LABELN_MAX);
+
+			return;
+		}
+		if ((*lbl_cnt) >= labels_n) {
+			labels_n *= 2;
+			tmp = realloc(labels,
+			(size_t)labels_n * sizeof(*labels));
+
+			if (tmp == NULL) {
+				perror("realloc");
+				return;
+			}
+
+			labels = tmp;
+			labels[(*lbl_cnt)].line = linenum;
+			(*lbl_cnt)++;
+		}
+
+		snprintf(labels[(*lbl_cnt)].name,
+			 sizeof labels[(*lbl_cnt)].name,
+			 "%s", label_name);
+	}
+}
+
+void
 runbat (int fd)
 {
-	char *line, *tmpbuf, *tok, *cmd, *savptr = NULL;
-	int sz, ch, bytes, i;
+	char *line, *tmpbuf, *tok, *cmd, *labeln, *savptr = NULL,
+	     **lines, **tmp;
+	int ch, bytes, i;;
+	size_t sz, rgoto, linenum, lines_max, lines_n, lbl_cnt;
 	struct opt arg;
 	bool local_echo;
-	sz = 256;
-	ch = bytes = 0;
-	line = calloc((size_t)sz, sizeof(char));
+	sz = labels_n = lines_max = 256;
+	ch = bytes = lbl_cnt = lines_n = linenum = 0;
+	line = calloc(sz, sizeof(char));
+	labels = calloc(labels_n, sizeof *labels);
+	lines = calloc(lines_max, sizeof(char *));
 	local_echo = true;
 
-	if (line == NULL) {
+	if (line == NULL || labels == NULL || lines == NULL) {
 		perror("calloc");
 		return;
 	}
 
 	while (read(fd, &ch, 1) == 1) {
-		if ((bytes + 1) >= sz) {
+		if ((size_t)(bytes + 1) >= sz) {
 			sz *= 2;
 			tmpbuf = realloc(line, (long unsigned int)sz
 			                       * sizeof(char));
@@ -956,16 +1013,46 @@ runbat (int fd)
 	tok = strtok_r(line, "\r\n",  &savptr);
 
 	while (tok != NULL) {
+		if (lines_n >= lines_max) {
+			lines_max *= 2;
+			tmp = realloc(lines, lines_max * sizeof(char *));
+
+			if (tmp == NULL) {
+				perror("realloc");
+				free(line);
+				free(labels);
+
+				return;
+			}
+
+			lines = tmp;
+		}
+
+		lines[lines_n++] = tok;
+		tok = strtok_r(NULL, "\r\n", &savptr);
+	}
+
+	while (linenum < lines_n) {
+		tok = lines[linenum];
 		arg = parse_cmd(tok);
 
 		if (arg.argv == NULL) {
 			tok = strtok_r(NULL, "\r\n", &savptr);
+			linenum++;
 			continue;
 		}
 		if (arg.argc < 1) goto next;
 
 		cmd = arg.argv[0];
 
+		if (cmd[0] == ':') {
+			if (strlen(cmd) > 1) {
+				labeln = cmd + 1;
+
+				addlabel(labeln, &lbl_cnt, linenum);
+			}
+			goto next;
+		}
 		if (cmd[0] == '@')
 			cmd++;
 		if ((strcasecmp(cmd, "echo") == 0
@@ -976,6 +1063,29 @@ runbat (int fd)
 				local_echo = true;
 			else
 				local_echo = false;
+			goto next;
+		}
+		if (strcasecmp(cmd, "goto") == 0) {
+			if (arg.argc < 2) {
+				puts("GOTO requires label name");
+				goto next;
+			}
+			if (arg.argc > 2) {
+				puts("The syntax of the command is incorrect.");
+				goto next;
+			}
+
+			rgoto = dos_goto(arg.argv[1]);
+
+			if (rgoto == (size_t)-1) {
+				puts("GOTO label not found");
+				goto next;
+			}
+
+			gotoline(line, rgoto, &tok, &savptr);
+
+			linenum = rgoto;
+
 			goto next;
 		}
 		if (local_echo && strlen(cmd) > 0
@@ -999,8 +1109,10 @@ runbat (int fd)
 			free(arg.argv[i]);
 		free(arg.argv);
 
-		tok = strtok_r(NULL, "\r\n", &savptr);
+		linenum++;
 	}
 
+	free(lines);
+	free(labels);
 	free(line);
 }

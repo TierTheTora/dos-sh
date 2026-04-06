@@ -1,5 +1,6 @@
 #include "headers/dos_cmds.h"
 #include "headers/dos_exec.h"
+#include "headers/dos_lib.h"
 #include "headers/dos_const.h"
 #include "headers/print.h"
 #include "headers/conio.h"
@@ -652,6 +653,20 @@ dos_free (char **argv, int argc)
 	       used_b,
 	       free_b
 	);
+}
+
+size_t
+dos_goto (char *label)
+{
+	size_t i;
+
+	for (i = 0; i < labels_n; i++) {
+		if (strcasecmp(labels[i].name, label) == 0) {
+			return labels[i].line;
+		}
+	}
+
+	return (size_t)-1;
 }
 
 void

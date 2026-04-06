@@ -2,6 +2,7 @@
 # define DOS_LIB_H
 
 #include <stdint.h>
+#include <sys/types.h>
 #include "dos_const.h"
 
 #define SEG_OFF(seg, off) ((WORD)((seg) << 4) + (off))
@@ -39,9 +40,18 @@ typedef struct {
 	BYTE flags;
 } REGS;
 
+#define LABELN_MAX 30
+
+typedef struct {
+	char name[31];
+	size_t line;
+} label;
+
 extern BYTE *MEMORY;
 extern HANDLE *handles;
 extern BOOL memory_freeable, handles_freeable;
+extern label *labels;
+extern size_t labels_n;
 
 int init_dos
 	();

@@ -2,6 +2,7 @@
 # define DOS_CMDS_H
 
 #include <stdbool.h>
+#include <sys/types.h>
 
 extern bool echo;
 
@@ -29,6 +30,8 @@ void dos_fc
 	(char **argv, int argc);
 void dos_free
 	(char **argv, int argc);
+size_t dos_goto
+	(char *label);
 void dos_help
 	(char **argv, int argc);
 void dos_mkdir

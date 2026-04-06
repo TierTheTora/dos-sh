@@ -49,6 +49,7 @@ void
 restore_term ()
 {
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+	print("\033[0m");
 }
 
 void *
