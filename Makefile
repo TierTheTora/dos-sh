@@ -1,5 +1,6 @@
 CC=gcc
 FLAGS=-Wall -Wextra -g
+LIBS=-lreadline
 
 all: build
 
@@ -18,7 +19,7 @@ build: src/headers/print.h src/print.c \
 	$(CC) $(FLAGS) -c src/parse_opt.c -o build/parse_opt.o
 	$(CC) $(FLAGS) -c src/conio.c -o build/conio.o
 	$(CC) $(FLAGS) -c src/dos_lib.c -o build/dos_lib.o
-	$(CC) $(FLAGS) src/main.c build/*.o -o build/dos
+	$(CC) $(FLAGS) src/main.c build/*.o $(LIBS) -o build/dos
 
 clean:
 	rm -rf build

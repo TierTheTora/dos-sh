@@ -17,6 +17,8 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <stdbool.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 HANDLE *handles;
 BYTE *MEMORY;
@@ -522,21 +524,43 @@ dos_sys_read INT21 (REGS *r)
 {
 	WORD addr;
 	BYTE max_chars;
-	char *buffer;
-	int bytes_read;
+	char *line;
+	size_t bytes_read;
 	addr = SEG_OFF(r->DS, r->DX);
 	max_chars = MEMORY[addr];
+	
+	rl_bind_keyseq("\033[A", NULL);
+	rl_bind_keyseq("\033[B", NULL);
 
-	fflush(stdout);
+	line = readline(" ");
 
-	buffer = (char *)(&MEMORY[addr + 2]);
-	bytes_read = dos_read(buffer, max_chars);
-
-	if (bytes_read < 0) {
+	rl_bind_keyseq("\033[A", rl_get_previous_history);
+	rl_bind_keyseq("\033[B", rl_get_next_history);
+	
+	if (line == NULL) {
 		r->AL = 0;
 		MEMORY[addr + 1] = 0;
+
+		perror("malloc");
+
 		return;
 	}
+
+	bytes_read = strlen(line);
+
+	if (bytes_read < 1) {
+		r->AL = 0;
+		MEMORY[addr + 1] = 0;
+
+		free(line);
+
+		return;
+	}
+
+	if (bytes_read > max_chars) bytes_read = max_chars;
+
+	memcpy(&MEMORY[addr + 2], line, bytes_read);
+	free(line);
 
 	MEMORY[addr + 1] = bytes_read;
 	r->AL = bytes_read;
@@ -974,7 +998,7 @@ void
 runbat (int fd)
 {
 	char *line, *tmpbuf, *tok, *cmd, *labeln, *savptr = NULL,
-	     **lines, **tmp;
+	     **lines, **tmp, *path;
 	int ch, bytes, i;;
 	size_t sz, rgoto, linenum, lines_max, lines_n, lbl_cnt;
 	struct opt arg;
@@ -1090,11 +1114,15 @@ runbat (int fd)
 		}
 		if (local_echo && strlen(cmd) > 0
 		&& (strcasecmp(cmd, "rem") != 0)) {
-			print_path();
+			path = get_path();
 
-			for (i = 0; i < arg.argc; i++) {
+			if (path == NULL)
+				goto next;
+
+			print(path);
+
+			for (i = 0; i < arg.argc; i++)
 				printf("%s ", arg.argv[i]);
-			}
 
 			putchar('\n');
 		}

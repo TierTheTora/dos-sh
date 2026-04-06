@@ -29,14 +29,10 @@ void dosify_dir
 	(char *path);
 void undosify_dir
 	(char *path);
-void print_path
+char *get_path
 	();
 void print_readable_bytes
 	(size_t bytes);
-int readprompt
-	(char **buffer, int *bytes, bool *buf_freeable);
-int dos_read
-	(char *buffer, size_t max);
 
 static inline ssize_t
 print (const char *msg)

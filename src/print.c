@@ -118,23 +118,23 @@ undosify_dir (char *path)
 	}
 }
 
-void
-print_path ()
+char *
+get_path ()
 {
-	char path[PATH_MAX + 1];
+	static char path[PATH_MAX + 2];
 
 	memset(path, 0, sizeof(path));
 
 	if (getcwd(path, sizeof(path)) != NULL) {
 		dosify_dir(path);
-		write(STDIN_FILENO, path, sizeof(path));
-		putchar('>');
-		fflush(stdout);
+		strcat(path, ">");
 	}
 	else {
 		perror("getcwd");
-		abort();
+		return NULL;
 	}
+
+	return path;
 }
 
 void
@@ -170,191 +170,4 @@ print_readable_bytes (size_t bytes)
 	}
 	else
 		printf("%20zub\n", bytes);
-}
-
-int
-readprompt (char **buffer, int *bytes, bool *buf_freeable)
-{
-	int chptr, bytes_read, move_back;
-	char ch, seq1, seq2;
-	chptr = bytes_read = 0;
-
-	while (true) {
-		ch = getch();
-
-		if (ch == EOF) return -1;
-		if (ch == '\033') {
-			seq1 = getch();
-			seq2 = getch();
-
-			if (seq1 == '[') {
-				switch (seq2) {
-				case 'C':
-					if (chptr < bytes_read) {
-						chptr++;
-						print("\033[C");
-					}
-					break;
-				case 'D':
-					if (chptr > 0) {
-						chptr--;
-						print("\033[D");
-					}
-					break;
-				}
-			}
-			continue;
-		}
-		if (ch == '\t')
-			ch = ' ';
-		if (ch == K_BACKSP) {
-			if (chptr > 0) {
-				memmove(&(*buffer)[chptr - 1],
-			                &(*buffer)[chptr],
-			                bytes_read - chptr);
-				
-				bytes_read--;
-				chptr--;
-				(*buffer)[bytes_read] = 0;
-
-				move_back = bytes_read - chptr + 1;
-
-				putchar('\b');
-				putchar(' ');
-
-				if (move_back > 0)
-					printf("\033[%dD", move_back);
-
-				if (bytes_read - chptr > 0) {
-					write(STDOUT_FILENO,
-					      &(*buffer)[chptr],
-					      bytes_read - chptr);
-				}
-
-			}
-			continue;
-		}
-		if (bytes_read + 2 >= (*bytes)) {
-			(*bytes) *= 2;
-			char *tmp = realloc((*buffer),
-				(*bytes) * sizeof(char));
-
-			if (tmp == NULL) {
-				(*buf_freeable) = false;
-				perror("realloc");
-				return -1;
-			}
-
-			(*buffer) = tmp;
-		}
-		if (ch == '\n') {
-			putchar('\n');
-			break;
-		}
-
-		memmove(&(*buffer)[chptr + 1],
-		        &(*buffer)[chptr],
-		        bytes_read - chptr);
-
-		(*buffer)[chptr] = (char)ch;
-		chptr++;
-		bytes_read++;
-		(*buffer)[bytes_read] = 0;
-
-		putchar(ch);
-		if (bytes_read - chptr > 0) {
-			printf("%*s", bytes_read - chptr, &(*buffer)[chptr]);
-			printf("\033[%dD", bytes_read - chptr);
-		}
-	}
-
-	return bytes_read;
-}
-
-int
-dos_read (char *buffer, size_t max)
-{
-	int chptr, bytes_read, move_back;
-	char ch, seq1, seq2;
-	chptr = bytes_read = 0;
-
-	while (true) {
-		ch = getch();
-
-		if (ch == EOF) return -1;
-		if (ch == '\033') {
-			seq1 = getch();
-			seq2 = getch();
-
-			if (seq1 == '[') {
-				switch (seq2) {
-				case 'C':
-					if (chptr < bytes_read) {
-						chptr++;
-						print("\033[C");
-					}
-					break;
-				case 'D':
-					if (chptr > 0) {
-						chptr--;
-						print("\033[D");
-					}
-					break;
-				}
-			}
-			continue;
-		}
-		if (ch == '\t')
-			ch = ' ';
-		if (ch == K_BACKSP) {
-			if (chptr > 0) {
-				memmove(&buffer[chptr - 1],
-			                &buffer[chptr],
-			                bytes_read - chptr);
-				
-				bytes_read--;
-				chptr--;
-				buffer[bytes_read] = 0;
-
-				putchar('\b');
-				if (bytes_read - chptr > 0) {
-					write(STDOUT_FILENO,
-					      &buffer[chptr],
-					      bytes_read - chptr);
-				}
-
-				putchar(' ');
-
-				move_back = bytes_read - chptr + 1;
-
-				if (move_back > 0) {
-					printf("\033[%dD", move_back);
-				}
-			}
-			continue;
-		}
-		if ((size_t)(bytes_read) + 2 >= max) {
-			while ((ch = getch()) != '\n');
-			return 0;
-		}
-		if (ch == '\n')
-			break;
-
-		memmove(&buffer[chptr + 1],
-		        &buffer[chptr],
-		        bytes_read - chptr);
-
-		buffer[chptr] = (char)ch;
-		chptr++;
-		bytes_read++;
-		buffer[bytes_read] = 0;
-
-		putchar(ch);
-		if (bytes_read - chptr > 0) {
-			printf("%*s", bytes_read - chptr, &buffer[chptr]);
-			printf("\033[%dD", bytes_read - chptr);
-		}
-	}
-
-	return bytes_read;
 }

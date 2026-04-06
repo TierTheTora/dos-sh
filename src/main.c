@@ -11,46 +11,14 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <termios.h>
-#include <locale.h>
 #include <pthread.h>
+#include <readline/readline.h>
+#include <readline/history.h>
 
-char *buffer;
-char *tmpbuf;
-bool buf_freeable;
 struct opt args;
-struct termios oldt;
 int tickcount;
 bool progend;
-pthread_mutex_t lock = PTHREAD_MUTEX_INITIALIZER;
 pthread_t tickthread;
-
-int
-init_term ()
-{
-	struct termios newt;
-
-	if (tcgetattr(STDIN_FILENO, &oldt) == -1)
-		return -1;
-
-	newt = oldt;
-	newt.c_lflag &= (tcflag_t)(~(ICANON | ECHO | ISIG));
-	newt.c_cc[VMIN] = 1;
-	newt.c_cc[VTIME] = 0;
-
-	if (tcsetattr(STDIN_FILENO, TCSANOW, &newt) == -1)
-		return -1;
-
-	setlocale(LC_ALL, "");
-
-	return 0;
-}
-
-void
-restore_term ()
-{
-	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-	print("\033[0m");
-}
 
 void *
 tick (void *arg)
@@ -58,11 +26,7 @@ tick (void *arg)
 	(void)arg;
 
 	while (true) {
-		pthread_mutex_lock(&lock);
-
 		if (progend) {
-			pthread_mutex_unlock(&lock);
-
 			break;
 		}
 		tickcount++;
@@ -74,7 +38,6 @@ tick (void *arg)
 			MEMORY[0x46F] = (BYTE)(tickcount >> 24) & 0xFF;
 		}
 
-		pthread_mutex_unlock(&lock);
 		usleep(50000);
 	}
 
@@ -85,16 +48,11 @@ void
 kill_dos ()
 {
 	int i;
-
-	pthread_mutex_lock(&lock);
-
 	progend = true;
 
-	pthread_mutex_unlock(&lock);
 	pthread_join(tickthread, NULL);
+	clear_history();
 
-	if (buf_freeable == true)
-		free(buffer);
 	if (args.argv != NULL) {
 		for (i = 0; i < args.argc; i++)
 			free(args.argv[i]);
@@ -108,9 +66,8 @@ kill_dos ()
 int
 main ()
 {
-	int bytes, bytes_read, rc;
-	bytes = 256;
-	buffer = malloc((long unsigned int)bytes * sizeof(char));
+	int rc;
+	char *line, *path;
 	tickcount = 0;
 	progend = false;
 	rc = pthread_create(&tickthread, NULL, &tick, NULL);
@@ -122,33 +79,35 @@ main ()
 
 	dos_cls();
 
-	if (buffer == NULL) {
-		buf_freeable = false;
-		perror("malloc");
-		return 1;
-	}
-
 	if (init_dos() != 0) return 1;
 
-	buf_freeable = true;
-
-	if (init_term() == -1) {
-		puts("Failed to initialize terminal.");
-		return -1;
-	}
+	init_term();
 
 	atexit(kill_dos);
 	print_box("Welcome to DOS in the linux terminal!\n"
 	          "Use \"HELP\" for help.");
 
 	for (;;) {
-		if (echo) print_path();
-		buffer[0] = 0;
+		if (echo) {
+			path = get_path();
 
-		bytes_read = readprompt(&buffer, &bytes, &buf_freeable);
+			if (path == NULL)
+				continue;
 
-		if (bytes_read >= 1) {
-			args = parse_cmd(buffer);
+			line = readline(path);
+		}
+		else
+			line = readline("");
+
+		if (line == NULL) {
+			perror("malloc");
+			continue;
+		}
+		if (strlen(line) >= 1) {
+			add_history(line);
+
+			args = parse_cmd(line);
+
 			dos_exec(args.argv[0], &args.argv[1],
 			         args.argc - 1, false);
 		}
