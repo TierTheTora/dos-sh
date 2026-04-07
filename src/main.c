@@ -6,6 +6,7 @@
 #include "headers/main.h"
 
 #include <linux/limits.h>
+#include <signal.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -82,10 +83,11 @@ main ()
 	if (init_dos() != 0) return 1;
 
 	init_term();
-
 	atexit(kill_dos);
 	print_box("Welcome to DOS in the linux terminal!\n"
 	          "Use \"HELP\" for help.");
+	signal(SIGINT, SIG_IGN);
+	signal(SIGTSTP, SIG_IGN);
 
 	for (;;) {
 		if (echo) {

@@ -11,7 +11,11 @@ extern struct opt args;
 static inline void
 init_term ()
 {
+	rl_catch_signals = 0;
+	rl_catch_sigwinch = 0;
+
 	rl_bind_key('\t', rl_insert);
+	rl_bind_key('\033', rl_insert);
 	/* ctrl+r (reverse-i-search) */
 	rl_bind_key('\022', NULL);
 	setlocale(LC_ALL, "");
