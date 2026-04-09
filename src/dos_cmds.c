@@ -679,7 +679,6 @@ dos_help (char **argv, int argc)
 {
 	int i;
 	bool all;
-
 	all = false;
 
 	puts("<BOX     > Display messages in a box.\n"

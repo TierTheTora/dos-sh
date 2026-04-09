@@ -1,6 +1,4 @@
 #include "headers/print.h"
-#include "headers/conio.h"
-#include "headers/keyb.h"
 
 #include <linux/limits.h>
 #include <stddef.h>
