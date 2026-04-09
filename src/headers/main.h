@@ -6,9 +6,13 @@
 #include <locale.h>
 #include <readline/readline.h>
 
+#define YEAR (__DATE__ + 7)
+
 #define SRC_LINK	"<https://github.com/TierTheTora/dos-sh.git>"
 #define AUTHOR		"TierTheTora"
-#define STARTUP_MSG	"\n\tCopyright (c) " __DATE__ " " AUTHOR  "\n\n"
+#define STARTUP_MSG	"\n\tCopyright (c) %s " AUTHOR "\n\n"
+
+#define PRINT_STARTUP_MSG	printf(STARTUP_MSG, YEAR);
 
 extern struct opt args;
 extern int tps, tickcount;

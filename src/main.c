@@ -138,7 +138,7 @@ main (int argc, char **argv)
 	atexit(kill_dos);
 	print_box("Welcome to DOS in the linux terminal!\n"
 	          "Use \"HELP\" for help.");
-	print(STARTUP_MSG);
+	PRINT_STARTUP_MSG;
 	signal(SIGINT, SIG_IGN);
 	signal(SIGTSTP, SIG_IGN);
 
