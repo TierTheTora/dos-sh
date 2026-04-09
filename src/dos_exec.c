@@ -171,6 +171,6 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	else
 		exec_noext(cmd, ext, ext_cnt);
 
-	if (echo && !isbatfile)
+	if (echo && !isbatfile && strcasecmp(cmd, "cls") != 0)
 		putchar('\n');
 }
