@@ -547,7 +547,7 @@ dos_fc (char **argv, int argc)
 	neq = false;
 
 	if (argc != 2) {
-		puts("The syntax of the command is incorrect.");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 
@@ -704,7 +704,7 @@ void
 dos_mkdir (char **argv, int argc)
 {
 	if (argc != 1) {
-		puts("The syntax of the command is incorrect.");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 
@@ -766,7 +766,7 @@ dos_ren (char **argv, int argc)
 	     dst[PATH_MAX + 4], *lastslash;
 
 	if (argc != 2) {
-		puts("The syntax of the command is incorrect.");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 
@@ -802,7 +802,7 @@ void
 dos_touch (char **argv, int argc)
 {
 	if (argc != 1) {
-		puts("The syntax of the command is incorrect.");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 
@@ -823,7 +823,7 @@ dos_type (char **argv, int argc)
 	char c;
 
 	if (argc == 0) {
-		puts("The syntax of the command is incorrect.");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 	for (i = 0; i < argc; i++) {
