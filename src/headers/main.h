@@ -6,7 +6,14 @@
 #include <locale.h>
 #include <readline/readline.h>
 
+#define SRC_LINK	"<https://github.com/TierTheTora/dos-sh.git>"
+#define AUTHOR		"TierTheTora"
+#define STARTUP_MSG	"\n\tCopyright (c) " __DATE__ " " AUTHOR  "\n\n"
+
 extern struct opt args;
+extern int tps, tickcount;
+extern bool progend;
+extern pthread_t tickthread;
 
 static inline void
 init_term ()
@@ -18,6 +25,7 @@ init_term ()
 	rl_bind_key('\033', rl_insert);
 	/* ctrl+r (reverse-i-search) */
 	rl_bind_key('\022', NULL);
+	print("\033[3 q");
 	setlocale(LC_ALL, "");
 }
 
@@ -27,7 +35,11 @@ restore_term ()
 	print("\033[0m");
 }
 
+void *tick
+	(void *arg);
 void kill_dos
+	();
+void print_help
 	();
 
 #endif /* MAIN_H */

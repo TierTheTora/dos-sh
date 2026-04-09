@@ -55,7 +55,7 @@ dos_call (char **argv, int argc)
 	int ext_cnt = 2;
 
 	if (argc < 1) {
-		puts("The syntax of the command is incorrect.\n");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 
@@ -82,7 +82,7 @@ dos_color (char **argv, int argc)
 
 	if (argc != 1) {
 		wrong_syntax:
-		puts("The syntax of the command is incorrect.\n");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 	if (strlen(argv[0]) != 2)
@@ -106,7 +106,7 @@ dos_copy (char **argv, int argc)
 	struct stat statbuf;
 
 	if (argc != 2) {
-		puts("The syntax of the command is incorrect.\n");
+		puts(DOSSTR_ILLEGAL_SYN);
 		return;
 	}
 
@@ -724,7 +724,7 @@ dos_mkdir (char **argv, int argc)
 void
 dos_pause ()
 {
-	puts("Press any key to continue . . .");
+	puts(DOSSTR_PKEY);
 	(void)getch();
 }
 

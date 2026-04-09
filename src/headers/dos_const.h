@@ -5,6 +5,9 @@ extern int ERRORLEVEL;
 
 #define DOS_VERSION "1.0.0"
 
+#define DOSSTR_PKEY		"Press any key to continue . . ."
+#define DOSSTR_ILLEGAL_SYN	"The syntax of the command is incorrect.\n"
+
 #define PRG_START     0x100
 #define MEM_MAX       0xFFFF
 #define HANDLES_MAX   0xFFFF

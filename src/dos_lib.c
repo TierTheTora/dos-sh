@@ -206,22 +206,10 @@ exec_add_r8 (REGS *r, WORD *ipidx)
 	reg   = (modrm >> 3) & 0x07;
 	rm    = modrm & 0x07;
 	src   = get_r8(r, reg);
-
-	if (!src) {
-		puts("Illegal source register");
-		return;
-	}
-
 	src_val = *src;
 
 	if (mod == 3) {
 		dst = get_r8(r, rm);
-
-		if (!dst) {
-			puts("Illegal destination register");
-			return;
-		}
-
 		dst_val = *dst;
 		res = dst_val + src_val;
 		*dst = res & 0xFF;
@@ -1122,7 +1110,7 @@ runbat (int fd)
 				goto next;
 			}
 			if (arg.argc > 2) {
-				puts("The syntax of the command is incorrect.");
+				puts(DOSSTR_ILLEGAL_SYN);
 				goto next;
 			}
 
