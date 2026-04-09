@@ -29,7 +29,7 @@ init_term ()
 	rl_bind_key('\033', rl_insert);
 	/* ctrl+r (reverse-i-search) */
 	rl_bind_key('\022', NULL);
-	print("\033[4 q");
+	print("\033[3 q");
 	setlocale(LC_ALL, "");
 }
 

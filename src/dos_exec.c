@@ -98,7 +98,7 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	if (strcasecmp(cmd, "box") == 0)
 		dos_box(argv, argc);
 
-	if (strcasecmp(cmd, "call") == 0)
+	else if (strcasecmp(cmd, "call") == 0)
 		dos_call(argv, argc);
 
 	else if (strcasecmp(cmd, "cd") == 0)

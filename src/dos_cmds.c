@@ -63,15 +63,35 @@ dos_call (char **argv, int argc)
 }
 
 int
-nibble_to_int (char nibble)
+nibble_to_color (char nibble)
 {
+	int nibnum = -1;
 	nibble = tolower((int)nibble);
 
 	if (nibble >= '0' && nibble <= '9')
-		return nibble - '0';
+		nibnum = nibble - '0';
 	if (nibble >= 'a' && nibble <= 'f')
-		return nibble - 'a' + 10;
-	return -1;
+		nibnum = nibble - 'a' + 10;
+	if (nibnum == -1)
+		return -1;
+
+	if (nibnum == DOSCOLOR_BLUE)
+		nibnum = COLOR_BLUE;
+	else if (nibnum == DOSCOLOR_RED)
+		nibnum = COLOR_RED;
+	if (nibnum == DOSCOLOR_AQUA)
+		nibnum = COLOR_AQUA;
+	else if (nibnum == DOSCOLOR_YELLOW)
+		nibnum = COLOR_YELLOW;
+	if (nibnum == DOSCOLOR_LIGHT_BLUE)
+		nibnum = COLOR_LIGHT_BLUE;
+	else if (nibnum == DOSCOLOR_LIGHT_RED)
+		nibnum = COLOR_LIGHT_RED;
+	if (nibnum == DOSCOLOR_LIGHT_AQUA)
+		nibnum = COLOR_LIGHT_AQUA;
+	else if (nibnum == DOSCOLOR_LIGHT_YELLOW)
+		nibnum = COLOR_LIGHT_YELLOW;
+	return nibnum;
 }
 
 void
@@ -88,8 +108,8 @@ dos_color (char **argv, int argc)
 	if (strlen(argv[0]) != 2)
 		goto wrong_syntax;
 
-	n1 = nibble_to_int((int)argv[0][0]);
-	n2 = nibble_to_int((int)argv[0][1]);
+	n1 = nibble_to_color((int)argv[0][0]);
+	n2 = nibble_to_color((int)argv[0][1]);
 
 	if (n1 == -1 || n2 == -1)
 		goto wrong_syntax;

@@ -19,7 +19,7 @@
 
 struct opt args;
 int tickcount, tps = 18;
-bool progend;
+bool progend, cur_blink = true;
 pthread_t tickthread;
 
 extern char *__progname;
@@ -44,17 +44,16 @@ tick (void *arg)
 			MEMORY[0x46E] = (BYTE)(tickcount >> 16) & 0xFF;
 			MEMORY[0x46F] = (BYTE)(tickcount >> 24) & 0xFF;
 		}
+		if (cur_blink) {
+			printf("\033[?25%c", on);
+			fflush(stdout);
 
-		/* blink cursor */
-		printf("\033[?25%c", on);
-		fflush(stdout);
-
-		if (on == 'h') on = 'l';
-		else on = 'h';
+			if (on == 'h') on = 'l';
+			else on = 'h';
+		}
 
 		usleep(1000000 / tps);
 	}
-
 	return NULL;
 }
 
@@ -85,8 +84,9 @@ print_help ()
 	printf("Usage: %s [OPTION]\n"
 	       "DOS-like shell capable of running COM and BAT files.\n"
 	       "\n"
-	       "\t-h,      --help     \tshow this help\n"
-	       "\t-t[NUM], --tps=[NUM]\tset ticks per second\n"
+	       "\t-c,\t\t--cursor-blink\tturn off manual cursor blinking\n"
+	       "\t-h,\t\t--help\t\tshow this help\n"
+	       "\t-t[NUM],\t--tps=[NUM]\tset ticks per second\n"
 	       "\n"
 	       "Download source at: " SRC_LINK "\n"
 	       "Written by " AUTHOR "\n"
@@ -101,13 +101,20 @@ main (int argc, char **argv)
 	tickcount = 0;
 	progend = false;
 	struct option longopts[] = {
-		{ "tps" , required_argument, NULL, 't' },
-		{ "help", no_argument      , NULL, 'h' },
+		{ "cursor-blink",	no_argument, NULL, 'c' },
+		{ "help",		no_argument, NULL, 'h' },
+		{ "tps" ,		required_argument, NULL, 't' },
 	};
 
-	while ((opt = getopt_long(argc, argv, "t:h", longopts, NULL))
+	while ((opt = getopt_long(argc, argv, "cht:", longopts, NULL))
 	      != -1) {
 		switch (opt) {
+		case 'c':
+			cur_blink = false;
+			break;
+		case 'h':
+			print_help();
+			return 0;
 		case 't':
 			tps = atoi(optarg);
 			if (tps <= 0) {
@@ -115,9 +122,6 @@ main (int argc, char **argv)
 				return 1;
 			}
 			break;
-		case 'h':
-			print_help();
-			return 0;
 		case '?':
 			return 1;
 		}
