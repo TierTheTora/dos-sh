@@ -4,6 +4,7 @@
 #include "headers/print.h"
 #include "headers/conio.h"
 
+#include <asm-generic/errno-base.h>
 #include <ctype.h>
 #include <linux/limits.h>
 #include <stddef.h>
@@ -188,11 +189,12 @@ get_longest_name (char *path)
 
 	if (dir == NULL) {
 		perror("opendir");
+
 		return -1;
 	}
-
 	while ((ent = readdir(dir)) != NULL) {
 		len = strlen(ent->d_name);
+
 		if (len > maxlen)
 			maxlen = len;
 	}
@@ -211,12 +213,14 @@ print_ent_info (char *file, char *d_name,
 	struct tm *timeinfo;
 	struct stat statbuf;
 	struct winsize ws;
-	char timebuf[81];
+	char timebuf[81], fullpath[PATH_MAX + 2];
+	int padding;
 
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws);
+	snprintf(fullpath, sizeof(fullpath), "%s/%s", file, d_name);
 
-	if (lstat(file, &statbuf) == -1) {
-		puts(file);
+	if (lstat(fullpath, &statbuf) == -1) {
+		if (errno == EACCES) return 0;
 		perror("lstat");
 		return -1;
 	}
@@ -238,16 +242,20 @@ print_ent_info (char *file, char *d_name,
 	if (b)
 		puts(d_name);
 	else if (w) {
-		*linesz += maxlen;
-		if (*linesz > ws.ws_col) {
+		padding = maxlen + 4;
+
+		if (*linesz > 0 && *linesz + padding > ws.ws_col) {
 			*linesz = 0;
 			putchar('\n');
-			fflush(stdout);
 		}
 		if (S_ISDIR(statbuf.st_mode))
-			printf("[%s]%-*c", d_name, maxlen, ' ');
+			printf("[%s]%-*c", d_name,
+			       (int)(padding - strlen(d_name) - 2),
+			       ' ');
 		else
-			printf("%-*s", maxlen + 2, d_name);
+			printf("%-*s", padding, d_name);
+
+		*linesz += padding;
 	}
 	else {
 		printf("%-*s", maxlen, d_name);
@@ -256,7 +264,7 @@ print_ent_info (char *file, char *d_name,
 			"<DIR>" :
 			"     "
 		);
-		printf("% 8ld %s\n", statbuf.st_size,
+		printf("% 20ld %s\n", statbuf.st_size,
 		       timebuf);
 	}
 
@@ -270,14 +278,13 @@ dos_dir (char **argv, int argc)
 	int i, maxlen, dirs, files, linesz, nsa, farg, filesz;
 	size_t bytes;
 	char path[PATH_MAX + 1], timebuf[81],
-	     *file;
+	     file[PATH_MAX + 1], real[PATH_MAX + 1];
 	DIR *dir;
 	time_t mod_time;
 	bool w, b, p, s;
 	struct stat statbuf;
 	struct tm *timeinfo;
 	struct dirent *ent;
-
 	dirs = files = bytes = linesz = nsa = filesz = 0;
 	w = b = p = s = false;
 
@@ -286,18 +293,7 @@ dos_dir (char **argv, int argc)
 		return;
 	}
 
-	filesz = strlen(path) + 2;
-	filesz *= sizeof(char);
-	file = malloc(filesz);
-
-	if (!file) {
-		perror("malloc");
-		return;
-	}
-
-	memset(file, 0, filesz);
 	strcpy(file, path);
-	strcat(file, "/");
 
 	for (i = 0; i < argc; i++) {
 		if (nsa > 1) {
@@ -318,76 +314,37 @@ dos_dir (char **argv, int argc)
 		}
 		else {
 			undosify_dir(argv[i]);
+			strncpy(file, argv[i], PATH_MAX + 1);
 
-			filesz += strlen(argv[i]);
-			filesz *= sizeof(char);
-			file = realloc(file, filesz);
-
-			if (!file) {
-				perror("realloc");
-				return;
-			}
-
-			memset(file, 0, filesz);
-			strcpy(file, path);
-			strcat(file, "/");
-			strcat(file, argv[i]);
 			farg = i;
 			nsa++;
 		}
 	}
 	
-	maxlen = get_longest_name(file);
-
-	if (!b) {
-		char dpath[filesz];
-		strcpy(dpath, file);
-		dosify_dir(dpath);
-		printf("Directory of %s.\n", dpath);
+	
+	if (lstat(file, &statbuf) == -1) {
+		perror("lstat");
+		return;
 	}
 
-	if (nsa != 0) {
-		if (lstat(file, &statbuf) == -1) {
-			perror("lstat");
+	if (S_ISDIR(statbuf.st_mode))
+		maxlen = get_longest_name(file);
+	else
+		maxlen = strlen(file);
+
+	if (!b) {
+		if (realpath(file, real) == NULL) {
+			perror("realpath");
 			return;
 		}
 
+		dosify_dir(real);
+		printf("Directory of %s.\n", real);
+	}
+	if (nsa != 0) {
 		if (S_ISDIR(statbuf.st_mode)) {
-			filesz = strlen(path) + strlen(argv[farg]) + 2;
-			filesz *= sizeof(char);
-			file = realloc(file, filesz);
-
-			if (!file) {
-				perror("realloc");
-				return;
-			}
-
-			memset(file, 0, filesz);
-			strcpy(file, path);
-			strcat(file, "/");
-			strcat(file, argv[farg]);
-
 			if ((dir = opendir(file)) != NULL) {
 				while ((ent = readdir(dir)) != NULL) {
-					filesz = strlen(path)
-					       + strlen(argv[farg])
-					       + 3
-					       + strlen(ent->d_name);
-					filesz *= sizeof(char);
-					file = realloc(file, filesz);
-
-					if (!file) {
-						perror("realloc");
-						return;
-					}
-
-					memset(file, 0, filesz);
-					strcpy(file, path);
-					strcat(file, "/");
-					strcat(file, argv[farg]);
-					strcat(file, "/");
-					strcat(file, ent->d_name);
-
 					if (print_ent_info(file, ent->d_name,
 						&dirs, &files, &bytes,
 						maxlen, &linesz, b, w) != 0) {
@@ -397,12 +354,10 @@ dos_dir (char **argv, int argc)
 			}
 			else {
 				perror("opendir");
-				free(file);
 				return;
 			}
 
 			closedir(dir);
-			free(file);
 
 			if (!b)
 				goto print_info;
@@ -429,35 +384,19 @@ dos_dir (char **argv, int argc)
 	}
 	if ((dir = opendir(path)) != NULL) {
 		while ((ent = readdir(dir)) != NULL) {
-			filesz = strlen(path) + 2
-			       + strlen(ent->d_name);
-			filesz *= sizeof(char);
-			file = realloc(file, filesz);
-
-			if (!file) {
-				perror("realloc");
-				return;
-			}
-
-			memset(file, 0, filesz);
-			strcpy(file, path);
-			strcat(file, "/");
-			strcat(file, ent->d_name);
-
 			if (print_ent_info(file, ent->d_name,
 			               &dirs, &files, &bytes,
 			               maxlen, &linesz, b, w) != 0) {
 				return;
 			}
 		}
+
 		closedir(dir);
 	}
 	else {
 		perror("opendir");
-		free(file);
 		return;
 	}
-	free(file);
 	if (!b) {
 		print_info:
 		printf("\n% 8d File(s)  % 21ld Byte(s).\n", files, bytes);
