@@ -5,7 +5,7 @@ ORG 100h
 START:
 	mov ah, 0
 	int 1ah
-	mov al, dl
+	mov ah, dl
 	mov cl, 3
 	div cl
 
