@@ -6,6 +6,11 @@
 #include "dos_const.h"
 
 #define SEG_OFF(seg, off) ((WORD)((seg) << 4) + (off))
+#define BETWEEN(memptr) (memptr % memsz)
+#define BETWEENEQ(memptr) (memptr %= memsz)
+
+#define SAFE_IP_PLUS(num) (BETWEEN((ipidx + num)))
+#define SAFE_PLUS(memptr, num) (BETWEEN((memptr + num)))
 
 #define DOS_SYSCALL(num)
 #define INT21
@@ -22,12 +27,13 @@ enum BITS {
 	_16BIT = 1,
 };
 
-typedef uint8_t  BYTE;
-typedef uint16_t WORD;
-typedef uint32_t DWORD;
-typedef uint64_t QWORD;
-typedef int32_t  HANDLE;
-typedef _Bool    BOOL;
+typedef uint8_t		BYTE;
+typedef uint16_t	WORD;
+typedef uint32_t	DWORD;
+typedef uint64_t	QWORD;
+typedef int32_t		HANDLE;
+typedef _Bool		BOOL;
+typedef size_t		memptr_t;
 
 typedef struct {
 	struct { union { BYTE AH, AL; }; WORD AX; };
@@ -62,7 +68,7 @@ HANDLE new_handle
 void int21h
 	(REGS *r);
 void runcom
-	(REGS *r, int fd);
+	(REGS *r, int fd, size_t sz);
 void runbat
 	(int fd);
 

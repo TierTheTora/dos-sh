@@ -14,8 +14,12 @@
 
 #define PRINT_STARTUP_MSG	printf(STARTUP_MSG, YEAR);
 
+/* tps currently only affects cursor blink speed  */
+#define DEFAULT_TPS 6
+
 extern struct opt args;
 extern int tps, tickcount;
+extern size_t memsz;
 extern bool progend;
 extern pthread_t tickthread;
 

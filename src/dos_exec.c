@@ -7,6 +7,7 @@
 #include <strings.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdbool.h>
 #include <dirent.h>
@@ -19,6 +20,7 @@ exec_noext (const char *cmd, const char *ext[], int ext_cnt)
 	REGS r;
 	DIR *dir;
 	struct dirent *ent;
+	struct stat statbuf;
 	char *fext;
 	char cmd2[strlen(cmd) + 10], *path, *last_slash,
 	     *base_cmd, name[strlen(cmd) + 10];
@@ -44,20 +46,20 @@ exec_noext (const char *cmd, const char *ext[], int ext_cnt)
 	if (dir) {
 		while ((ent = readdir(dir)) != NULL) {
 			for (i = 0; i < ext_cnt; i++) {
-			snprintf(name, sizeof(name),
-				 "%s%s",
-				 base_cmd, ext[i]);
+				snprintf(name, sizeof(name),
+					 "%s%s",
+					 base_cmd, ext[i]);
 
-			if (strcasecmp(ent->d_name,
-				       name) == 0) {
-				snprintf(cmd2, sizeof(cmd2),
-					 "%s/%s",
-					 path, ent->d_name);
+				if (strcasecmp(ent->d_name,
+					       name) == 0) {
+					snprintf(cmd2, sizeof(cmd2),
+						 "%s/%s",
+						 path, ent->d_name);
 
-				fd = open(cmd2, O_RDONLY);
+					fd = open(cmd2, O_RDONLY);
 
-				if (fd != -1) break;
-			}
+					if (fd != -1) break;
+				}
 			}
 			if (fd != -1) break;
 		}
@@ -71,8 +73,15 @@ exec_noext (const char *cmd, const char *ext[], int ext_cnt)
 	}
 
 	fext = strrchr(cmd2, '.');
-	if (fext && strcasecmp(fext, ".com") == 0)
-		runcom(&r, fd);
+	if (fext && strcasecmp(fext, ".com") == 0) {
+		if (lstat(cmd2, &statbuf) == -1) {
+			perror("lstat");
+
+			return -1;
+		}
+
+		runcom(&r, fd, statbuf.st_size);
+	}
 	else if (fext && strcasecmp(fext, ".bat") == 0)
 		runbat(fd);
 	else goto illegal;

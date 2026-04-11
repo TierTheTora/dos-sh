@@ -1,3 +1,4 @@
+#include "headers/dos_const.h"
 #include "headers/print.h"
 #include "headers/dos_exec.h"
 #include "headers/parse_opt.h"
@@ -5,6 +6,7 @@
 #include "headers/dos_lib.h"
 #include "headers/main.h"
 
+#include <bits/getopt_core.h>
 #include <linux/limits.h>
 #include <signal.h>
 #include <stdio.h>
@@ -18,7 +20,8 @@
 #include <readline/history.h>
 
 struct opt args;
-int tickcount, tps = 18;
+int tickcount, tps = DEFAULT_TPS;
+size_t memsz = MEM_MAX;
 bool progend, cur_blink = true;
 pthread_t tickthread;
 
@@ -87,6 +90,7 @@ print_help ()
 	       "\t-c,\t\t--cursor-blink\tturn off manual cursor blinking\n"
 	       "\t-h,\t\t--help\t\tshow this help\n"
 	       "\t-t[NUM],\t--tps=[NUM]\tset ticks per second\n"
+	       "\t-m[NUM],\t--mem=[NUM]\tset dos memory\n"
 	       "\n"
 	       "Download source at: " SRC_LINK "\n"
 	       "Written by " AUTHOR "\n"
@@ -104,6 +108,7 @@ main (int argc, char **argv)
 		{ "cursor-blink",	no_argument, NULL, 'c' },
 		{ "help",		no_argument, NULL, 'h' },
 		{ "tps" ,		required_argument, NULL, 't' },
+		{ "mem" ,		required_argument, NULL, 'm' },
 	};
 
 	while ((opt = getopt_long(argc, argv, "cht:", longopts, NULL))
@@ -119,6 +124,14 @@ main (int argc, char **argv)
 			tps = atoi(optarg);
 			if (tps <= 0) {
 				puts("TPS must be greater than 0.");
+				return 1;
+			}
+			break;
+		case 'm':
+			memsz = atoll(optarg);
+			if (memsz <= PRG_START) {
+				printf("Memory must have more than %d"
+				       " bytes\n", PRG_START);
 				return 1;
 			}
 			break;
