@@ -36,10 +36,10 @@ typedef _Bool		BOOL;
 typedef size_t		memptr_t;
 
 typedef struct {
-	struct { union { BYTE AH, AL; }; WORD AX; };
-	struct { union { BYTE BH, BL; }; WORD BX; };
-	struct { union { BYTE CH, CL; }; WORD CX; };
-	struct { union { BYTE DH, DL; }; WORD DX; };
+	union { struct { BYTE AL, AH; }; WORD AX; };
+	union { struct { BYTE BL, BH; }; WORD BX; };
+	union { struct { BYTE CL, CH; }; WORD CX; };
+	union { struct { BYTE DL, DH; }; WORD DX; };
 	WORD SI, DI, BP, SP;
 	WORD CS, DS, ES, FS, GS, SS;
 	WORD IP;
@@ -58,6 +58,7 @@ extern HANDLE *handles;
 extern BOOL memory_freeable, handles_freeable;
 extern label *labels;
 extern size_t labels_n, lbl_cnt;
+extern DWORD ticks;
 
 int init_dos
 	();

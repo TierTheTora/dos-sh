@@ -39,14 +39,9 @@ tick (void *arg)
 		if (progend) {
 			break;
 		}
+
 		tickcount++;
 
-		if (MEMORY != NULL) {
-			MEMORY[0x46C] = (BYTE)(tickcount) & 0xFF;
-			MEMORY[0x46D] = (BYTE)(tickcount >> 8) & 0xFF;
-			MEMORY[0x46E] = (BYTE)(tickcount >> 16) & 0xFF;
-			MEMORY[0x46F] = (BYTE)(tickcount >> 24) & 0xFF;
-		}
 		if (cur_blink) {
 			printf("\033[?25%c", on);
 			fflush(stdout);

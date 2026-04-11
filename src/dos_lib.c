@@ -642,6 +642,22 @@ dos_sys_write INT21 (REGS *r)
 }
 
 void
+dos_get_bios_tt (REGS *r)
+{
+	r->CX = tickcount >>	16;
+	r->DX = tickcount &	0xFFFF;
+}
+
+void
+int1ah (REGS *r)
+{
+	switch (r->AH) {
+	case 0x00: dos_get_bios_tt (r); break;
+	default: printf("INT1Ah, AH=%02X not implemented.\n", r->AH);
+	}
+}
+
+void
 int21h (REGS *r)
 {
 	switch (r->AH) {
@@ -918,6 +934,9 @@ runcom (REGS *r, int fd, size_t sz)
 			ipidx = SAFE_IP_PLUS(1);
 
 			switch (ch2) {
+			case 0x1A:
+				int1ah(r);
+				break;
 			case 0x20:
 				goto unload_com;
 			case 0x21:
