@@ -33,7 +33,7 @@ typedef uint32_t	DWORD;
 typedef uint64_t	QWORD;
 typedef int32_t		HANDLE;
 typedef _Bool		BOOL;
-typedef size_t		memptr_t;
+typedef int64_t		memptr_t;
 
 typedef struct {
 	union { struct { BYTE AL, AH; }; WORD AX; };

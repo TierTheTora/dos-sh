@@ -2,6 +2,7 @@
 # define MAIN_H
 
 #include "print.h"
+#include "dos_lib.h"
 
 #include <locale.h>
 #include <readline/readline.h>
@@ -19,7 +20,7 @@
 
 extern struct opt args;
 extern int tps, tickcount;
-extern size_t memsz;
+extern memptr_t memsz;
 extern bool progend;
 extern pthread_t tickthread;
 

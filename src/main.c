@@ -21,7 +21,7 @@
 
 struct opt args;
 int tickcount, tps = DEFAULT_TPS;
-size_t memsz = MEM_MAX;
+memptr_t memsz = MEM_MAX;
 bool progend, cur_blink = true;
 pthread_t tickthread;
 
@@ -165,7 +165,6 @@ main (int argc, char **argv)
 		}
 		else
 			line = readline("");
-
 		if (line == NULL) {
 			perror("malloc");
 			continue;
