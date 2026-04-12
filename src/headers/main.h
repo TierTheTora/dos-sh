@@ -21,7 +21,7 @@
 extern struct opt args;
 extern int tps, tickcount;
 extern memptr_t memsz;
-extern bool progend;
+extern bool progend, color_clear;
 extern pthread_t tickthread;
 
 static inline void

@@ -1,4 +1,5 @@
 #include "headers/dos_const.h"
+#include "headers/conio.h"
 #include "headers/print.h"
 #include "headers/dos_exec.h"
 #include "headers/parse_opt.h"
@@ -23,6 +24,7 @@ struct opt args;
 int tickcount, tps = DEFAULT_TPS;
 memptr_t memsz = MEM_MAX;
 bool progend, cur_blink = true;
+bool color_clear = false;
 pthread_t tickthread;
 
 extern char *__progname;
@@ -83,9 +85,10 @@ print_help ()
 	       "DOS-like shell capable of running COM and BAT files.\n"
 	       "\n"
 	       "\t-c,\t\t--cursor-blink\tturn off manual cursor blinking\n"
+	       "\t-C,\t\t--color-clear\tclear the screen before using the color command\n"
 	       "\t-h,\t\t--help\t\tshow this help\n"
-	       "\t-t[NUM],\t--tps=[NUM]\tset ticks per second\n"
 	       "\t-m[NUM],\t--mem=[NUM]\tset dos memory\n"
+	       "\t-t[NUM],\t--tps=[NUM]\tset ticks per second\n"
 	       "\n"
 	       "Download source at: " SRC_LINK "\n"
 	       "Written by " AUTHOR "\n"
@@ -101,32 +104,36 @@ main (int argc, char **argv)
 	progend = false;
 	struct option longopts[] = {
 		{ "cursor-blink",	no_argument, NULL, 'c' },
+		{ "color-clear",	no_argument, NULL, 'C' },
 		{ "help",		no_argument, NULL, 'h' },
-		{ "tps" ,		required_argument, NULL, 't' },
 		{ "mem" ,		required_argument, NULL, 'm' },
+		{ "tps" ,		required_argument, NULL, 't' },
 	};
 
-	while ((opt = getopt_long(argc, argv, "cht:", longopts, NULL))
+	while ((opt = getopt_long(argc, argv, "cChm:t:", longopts, NULL))
 	      != -1) {
 		switch (opt) {
 		case 'c':
 			cur_blink = false;
 			break;
+		case 'C':
+			color_clear = true;
+			break;
 		case 'h':
 			print_help();
 			return 0;
-		case 't':
-			tps = atoi(optarg);
-			if (tps <= 0) {
-				puts("TPS must be greater than 0.");
-				return 1;
-			}
-			break;
 		case 'm':
 			memsz = atoll(optarg);
 			if (memsz <= PRG_START) {
 				printf("Memory must have more than %d"
 				       " bytes\n", PRG_START);
+				return 1;
+			}
+			break;
+		case 't':
+			tps = atoi(optarg);
+			if (tps <= 0) {
+				puts("TPS must be greater than 0.");
 				return 1;
 			}
 			break;
@@ -142,7 +149,7 @@ main (int argc, char **argv)
 		return 1;
 	}
 
-	dos_cls();
+	clrscr();
 
 	if (init_dos() != 0) return 1;
 

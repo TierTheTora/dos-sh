@@ -1,4 +1,5 @@
 #include "headers/dos_cmds.h"
+#include "headers/main.h"
 #include "headers/dos_exec.h"
 #include "headers/dos_const.h"
 #include "headers/print.h"

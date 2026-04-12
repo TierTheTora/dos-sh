@@ -1,4 +1,6 @@
 #include "headers/dos_exec.h"
+#include "headers/main.h"
+#include "headers/conio.h"
 #include "headers/dos_lib.h"
 #include "headers/print.h"
 #include "headers/dos_cmds.h"
@@ -115,11 +117,18 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	else if (strcasecmp(cmd, "chdir") == 0)
 		dos_cd(argv, argc);
 
-	else if (strcasecmp(cmd, "cls") == 0)
+	else if (strcasecmp(cmd, "cls") == 0) {
 		dos_cls();
+		return;
+	}
 
-	else if (strcasecmp(cmd, "color") == 0)
+	else if (strcasecmp(cmd, "color") == 0) {
 		dos_color(argv, argc);
+		if (color_clear == true) {
+			clrscr();
+			return;
+		}
+	}
 
 	else if (strcasecmp(cmd, "copy") == 0)
 		dos_copy(argv, argc);
@@ -180,6 +189,6 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	else
 		exec_noext(cmd, ext, ext_cnt);
 
-	if (echo && !isbatfile && strcasecmp(cmd, "cls") != 0)
+	if (echo && !isbatfile)
 		putchar('\n');
 }
