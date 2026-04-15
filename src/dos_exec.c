@@ -16,7 +16,7 @@
 #include <stdlib.h>
 
 int
-exec_noext (const char *cmd, const char *ext[], int ext_cnt)
+exec_noext (const char *cmd, const char *ext[], int ext_cnt, bool err)
 {
 	int fd, i;
 	REGS r;
@@ -69,15 +69,17 @@ exec_noext (const char *cmd, const char *ext[], int ext_cnt)
 	}
 	if (fd == -1) {
 		illegal:
-		dosify_dir((char *)cmd);
-		printf("Illegal command: %s.\n", cmd);
+		if (err == X_EXEC_VERBOSE) {
+			dosify_dir((char *)cmd);
+			printf("Illegal command: %s.\n", cmd);
+		}
 		return -1;
 	}
 
 	fext = strrchr(cmd2, '.');
 	if (fext && strcasecmp(fext, ".com") == 0) {
 		if (lstat(cmd2, &statbuf) == -1) {
-			perror("lstat");
+			if (err == X_EXEC_VERBOSE) perror("lstat");
 
 			return -1;
 		}
@@ -187,7 +189,7 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 		dos_ver();
 
 	else
-		exec_noext(cmd, ext, ext_cnt);
+		exec_noext(cmd, ext, ext_cnt, X_EXEC_VERBOSE);
 
 	if (echo && !isbatfile)
 		putchar('\n');

@@ -61,7 +61,7 @@ dos_call (char **argv, int argc)
 		return;
 	}
 
-	exec_noext(argv[0], ext, ext_cnt);
+	exec_noext(argv[0], ext, ext_cnt, X_EXEC_VERBOSE);
 }
 
 int

@@ -161,6 +161,12 @@ main (int argc, char **argv)
 	signal(SIGINT, SIG_IGN);
 	signal(SIGTSTP, SIG_IGN);
 
+	exec_noext(	"autoexec",
+			(const char*[]){ ".bat" },
+			1,
+			X_EXEC_SILENT
+	);
+
 	for (;;) {
 		if (echo) {
 			path = get_path();

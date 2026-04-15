@@ -1089,19 +1089,18 @@ runbat (int fd)
 	int ch, bytes, i;;
 	size_t sz, rgoto, linenum, lines_max, lines_n;
 	struct opt arg;
-	bool local_echo;
+	bool local_echo, print_cmd;
 	sz = labels_n = lines_max = 256;
 	ch = bytes = lbl_cnt = lines_n = linenum = 0;
 	line = calloc(sz, sizeof(char));
 	labels = calloc(labels_n, sizeof *labels);
 	lines = calloc(lines_max, sizeof(char *));
-	local_echo = true;
+	local_echo = print_cmd = true;
 
 	if (line == NULL || labels == NULL || lines == NULL) {
 		perror("calloc");
 		return;
 	}
-
 	while (read(fd, &ch, 1) == 1) {
 		if ((size_t)(bytes + 1) >= sz) {
 			sz *= 2;
@@ -1160,8 +1159,12 @@ runbat (int fd)
 
 		if (cmd[0] == ':')
 			goto next;
-		if (cmd[0] == '@')
+		if (cmd[0] == '@') {
+			if (local_echo == true)
+				print_cmd = false;
+
 			cmd++;
+		}
 		if ((strcasecmp(cmd, "echo") == 0
 		&& (arg.argc > 1))
 		&& ((strcasecmp(arg.argv[1], "on") == 0)
@@ -1194,7 +1197,7 @@ runbat (int fd)
 
 			goto next;
 		}
-		if (local_echo && strlen(cmd) > 0
+		if (local_echo && print_cmd && strlen(cmd) > 0
 		&& (strcasecmp(cmd, "rem") != 0)) {
 			path = get_path();
 
@@ -1220,6 +1223,7 @@ runbat (int fd)
 		free(arg.argv);
 
 		linenum++;
+		print_cmd = local_echo;
 	}
 
 	free(lines);
