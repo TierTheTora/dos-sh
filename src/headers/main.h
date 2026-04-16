@@ -6,6 +6,8 @@
 
 #include <locale.h>
 #include <readline/readline.h>
+#include <time.h>
+#include <stdlib.h>
 
 #define YEAR (__DATE__ + 7)
 
@@ -36,6 +38,7 @@ init_term ()
 	rl_bind_key('\022', NULL);
 	print("\033[3 q");
 	setlocale(LC_ALL, "");
+	srand(time(NULL));
 }
 
 static inline void

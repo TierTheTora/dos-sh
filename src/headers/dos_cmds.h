@@ -44,8 +44,17 @@ enum {
 	COLOR_BRIGHT_WHITE	= 15,
 };
 
-extern bool echo;
+struct vartable {
+	char name[256];
+	char *value;
+};
 
+extern bool echo;
+extern struct vartable *vars;
+extern size_t vars_cnt, vars_max;
+
+int  init_vars
+	();
 void dos_box
 	(char **argv, int argc);
 void dos_call
@@ -79,6 +88,8 @@ void dos_pause
 void dos_rmdir
 	(char **argv, int argc);
 void dos_ren
+	(char **argv, int argc);
+void dos_set
 	(char **argv, int argc);
 void dos_touch
 	(char **argv, int argc);

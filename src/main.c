@@ -153,6 +153,7 @@ main (int argc, char **argv)
 
 	if (init_dos() != 0) return 1;
 
+	init_vars();
 	init_term();
 	atexit(kill_dos);
 	print_box("Welcome to DOS in the linux terminal!\n"

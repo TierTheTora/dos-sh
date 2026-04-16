@@ -1,5 +1,4 @@
 #include "headers/dos_cmds.h"
-#include "headers/main.h"
 #include "headers/dos_exec.h"
 #include "headers/dos_const.h"
 #include "headers/print.h"
@@ -24,6 +23,23 @@
 #include <sys/statvfs.h>
 
 bool echo = true;
+size_t vars_cnt, vars_max;
+struct vartable *vars;
+
+int
+init_vars ()
+{
+	vars_cnt = 0;
+	vars_max = 256;
+	vars = calloc(vars_max, sizeof *vars);
+
+	if (vars == NULL) {
+		perror("calloc");
+		return -1;
+	}
+
+	return 0;
+}
 
 void 
 dos_box (char **argv, int argc)
@@ -755,6 +771,111 @@ dos_ren (char **argv, int argc)
 
 	if (rename(argv[0], dst) != 0)
 		perror("rename");
+}
+
+bool
+var_exists (char *varname)
+{
+	size_t i;
+
+	for (i = 0; i < vars_cnt; i++)
+		if (strcasecmp(vars[i].name, varname) == 0)
+			return true;
+	return false;
+}
+
+size_t
+get_varidx (char *varname)
+{
+	size_t i;
+
+	for (i = 0; i < vars_cnt; i++)
+		if (strcasecmp(vars[i].name, varname) == 0)
+			return i;
+	return -1;
+}
+
+void
+dos_set (char **argv, int argc)
+{
+	char varname[256], *varptr;
+	int varchars, valuelen, varidx;
+	size_t i;
+	struct vartable *tmp;
+	varchars = valuelen = 0;
+	varidx = vars_cnt;
+
+	if (argc < 1) {
+		for (i = 0; i < vars_cnt; i++) {
+			printf("%s=%s\n", vars[i].name, vars[i].value);
+		}
+		return;
+	}
+	while (**argv != '=' && **argv != 0) {
+		varname[varchars++] = **argv;
+		(*argv)++;
+	}
+	if (**argv != '=' || varchars == 0) {
+		puts(DOSSTR_ILLEGAL_SYN);
+		return;
+	}
+	if (varchars > 255) {
+		puts("SET: variable name exceeds 255 character limit.");
+
+		return;
+	}
+	
+	varname[varchars] = 0;
+	/* skip '=' */
+	(*argv)++;
+
+	if (var_exists(varname)) {
+		varidx = get_varidx(varname);
+
+		free(vars[varidx].value);
+	}
+	else {
+		if (vars_cnt >= vars_max) {
+			vars_max *= 2;
+			tmp = realloc(vars, vars_max * sizeof(*vars));
+
+			if (tmp == NULL) {
+				perror("realloc");
+
+				return;
+			}
+
+			vars = tmp;
+		}
+
+		varidx = vars_cnt++;
+	}
+	for (i = 0; argv[i] != NULL; i++) {
+		valuelen += strlen(argv[i]);
+		if (argv[i + 1] != NULL) valuelen++;
+	}
+
+	valuelen++;
+	vars[varidx].value = calloc(valuelen, sizeof(char));
+
+	if (vars[varidx].value == NULL) {
+		perror("calloc");
+
+		return;
+	}
+
+	varptr = vars[varidx].value;
+
+	for (i = 0; argv[i] != NULL; i++) {
+		strcpy(varptr, argv[i]);
+
+		varptr += strlen(argv[i]);
+
+		if (argv[i + 1] != NULL)
+			*varptr++ = ' ';
+	}
+
+	strcpy(vars[varidx].name, varname);
 }
 
 void
