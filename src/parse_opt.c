@@ -127,8 +127,17 @@ parse_cmd (const char *s)
 				p = newp;
 		}
 		else {
-			while (*p != 0 && !isspace(*p))
-				*dest++ = *p++;
+			while (*p != 0 && !isspace(*p)) {
+				if (*p == '%') {
+					newp = substitute_var(p, &dest);
+
+					if (newp == NULL)
+						*dest++ = *p++;
+					else
+						p = newp;
+				}
+				else *dest++ = *p++;
+			}
 		}
 
 		*dest = 0;
