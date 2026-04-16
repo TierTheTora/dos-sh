@@ -55,7 +55,6 @@ typedef struct {
 
 extern BYTE *MEMORY;
 extern HANDLE *handles;
-extern BOOL memory_freeable, handles_freeable;
 extern label *labels;
 extern size_t labels_n, lbl_cnt;
 extern DWORD ticks;

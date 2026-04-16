@@ -25,8 +25,6 @@
 HANDLE *handles;
 BYTE *MEMORY;
 int ERRORLEVEL = 0;
-BOOL memory_freeable = false;
-BOOL handles_freeable = false;
 label *labels;
 size_t labels_n, lbl_cnt;
 memptr_t ipidx;
@@ -127,16 +125,13 @@ init_dos ()
 {
 	MEMORY = calloc(memsz + 1, sizeof(BYTE));
 	handles = malloc((HANDLES_MAX + 1) * sizeof(HANDLE));
-	handles_freeable = memory_freeable = true;
 
 	if (!MEMORY) {
 		puts("Could not initalize memory");
-		memory_freeable = false;
 		return -1;
 	}
 	if (!handles) {
 		puts("Could not initalize handles");
-		handles_freeable = false;
 		return -1;
 	}
 

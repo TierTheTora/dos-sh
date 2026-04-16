@@ -10,6 +10,7 @@
 #include <bits/getopt_core.h>
 #include <linux/limits.h>
 #include <signal.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -60,18 +61,23 @@ tick (void *arg)
 void
 kill_dos ()
 {
-	int i;
+	size_t i;
 	progend = true;
 
 	pthread_join(tickthread, NULL);
 	clear_history();
 
 	if (args.argv != NULL) {
-		for (i = 0; i < args.argc; i++)
+		for (i = 0; i < (size_t)args.argc; i++)
 			free(args.argv[i]);
 	}
-	if (memory_freeable)  free(MEMORY);
-	if (handles_freeable) free(handles);
+	if (MEMORY != NULL) 	free(MEMORY);
+	if (handles != NULL)	free(handles);
+	if (vars != NULL) {
+		for (i = 0; i < vars_cnt; i++)
+			free(vars[i].value);
+		free(vars);
+	}
 
 	print("\033[0 q");
 	print("\033[?25h");
@@ -151,16 +157,15 @@ main (int argc, char **argv)
 
 	clrscr();
 
-	if (init_dos() != 0) return 1;
+	if (init_dos() != 0)	return 1;
+	if (init_vars() != 0)	return 1;
 
-	init_vars();
 	init_term();
 	atexit(kill_dos);
 	print_box("Welcome to DOS in the linux terminal!\n"
 	          "Use \"HELP\" for help.");
 	PRINT_STARTUP_MSG;
 	signal(SIGINT, SIG_IGN);
-	signal(SIGTSTP, SIG_IGN);
 
 	exec_noext(	"autoexec",
 			(const char*[]){ ".bat" },
