@@ -3,6 +3,7 @@
 
 #include "print.h"
 #include "dos_lib.h"
+#include "dos_const.h"
 
 #include <locale.h>
 #include <readline/readline.h>
@@ -13,7 +14,8 @@
 
 #define SRC_LINK	"<https://github.com/TierTheTora/dos-sh.git>"
 #define AUTHOR		"TierTheTora"
-#define STARTUP_MSG	"\n\tCopyright (c) %s " AUTHOR "\n\n"
+#define STARTUP_MSG	"\n\tCopyright (c) %s " AUTHOR "\n" \
+                  	"\n\tDOS Version " DOS_VERSION "\n\n"
 
 #define PRINT_STARTUP_MSG	printf(STARTUP_MSG, YEAR);
 

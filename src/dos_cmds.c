@@ -498,7 +498,9 @@ dos_echo (char **argv, int argc)
 		arglen = strlen(argv[i]);
 
 		write(STDOUT_FILENO, argv[i], arglen);
-		putchar(' ');
+
+		if (arglen > 0) putchar(' ');
+
 		fflush(stdout);
 	}
 
