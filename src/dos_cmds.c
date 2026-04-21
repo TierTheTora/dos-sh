@@ -912,11 +912,10 @@ dos_type (char **argv, int argc)
 		fd = open(argv[i], O_RDONLY);
 		
 		if (fd == -1) {
-			printf("The file %s does not exist.",
-			       argv[i]);
+			puts("File does not exist.");
+
 			continue;
 		}
-
 		while (read(fd, &c, 1) == 1) {
 			putchar(c);
 		}
