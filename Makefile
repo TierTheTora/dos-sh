@@ -1,5 +1,5 @@
 CC=gcc
-FLAGS=-Wall -Wextra
+FLAGS=-Wall -Wextra -Wpedantic
 LIBS=-lreadline
 SRC_DIR=src
 BUILD_DIR=build

@@ -23,10 +23,10 @@ put_tabl_h (size_t len)
 	puts("+");
 }
 
-void
-put_tabl_v (const char *msg, size_t len, struct substr_info ssi)
+static void
+put_tabl_v (const char *msg, ssize_t len, struct substr_info ssi)
 {
-	size_t i, j, padding, ch;
+	ssize_t i, j, padding, ch;
 	ch = 0;
 
 	putchar('|');
@@ -34,7 +34,7 @@ put_tabl_v (const char *msg, size_t len, struct substr_info ssi)
 	for (i = 0; i <= len; i++, ch++) {
 		if (msg[i] == '\n'
 		 || i == len) {
-			padding = ssi.longest_substr - ch;
+			padding = (ssize_t)ssi.longest_substr - ch;
 
 			for (j = 0; j < padding; j++) {
 				putchar(' ');
@@ -80,9 +80,9 @@ get_longest_substr (const char *s, char delim)
 void
 print_box (const char *msg)
 {
-	int msglen;
+	ssize_t msglen;
 	struct substr_info ssi;
-	msglen = strlen(msg);
+	msglen = (ssize_t)strlen(msg);
 	ssi = get_longest_substr(msg, '\n');
 
 	put_tabl_h(ssi.longest_substr);
@@ -117,7 +117,7 @@ undosify_dir (char *path)
 }
 
 char *
-get_path ()
+get_path (void)
 {
 	static char path[PATH_MAX + 2];
 
@@ -139,30 +139,29 @@ void
 print_readable_bytes (size_t bytes)
 {
 	double pb, tb, gb, mb, kb;
-
 	pb = (double)bytes / PBYTE_SIZE;
 	tb = (double)bytes / TBYTE_SIZE;
 	gb = (double)bytes / GBYTE_SIZE;
 	mb = (double)bytes / MBYTE_SIZE;
 	kb = (double)bytes / KBYTE_SIZE;
 
-	if (pb >= 1.0f) {
+	if (pb >= 1.0) {
 		printf("%20.1fPb\n", pb);
 		return;
 	}
-	else if (tb >= 1.0f) {
+	else if (tb >= 1.0) {
 		printf("%20.1fTb\n", tb);
 		return;
 	}
-	else if (gb >= 1.0f) {
+	else if (gb >= 1.0) {
 		printf("%20.1fGb\n", gb);
 		return;
 	}
-	else if (mb >= 1.0f) {
+	else if (mb >= 1.0) {
 		printf("%20.1fMb\n", mb);
 		return;
 	}
-	else if (kb >= 1.0f) {
+	else if (kb >= 1.0) {
 		printf("%20.1fKb\n", kb);
 		return;
 	}

@@ -14,6 +14,7 @@
 #include <string.h>
 #include <strings.h>
 #include <termios.h>
+#include <time.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,7 +30,7 @@ label *labels;
 size_t labels_n, lbl_cnt;
 memptr_t ipidx;
 
-DWORD
+static DWORD
 bitsnum (DWORD n)
 {
 	DWORD cnt = 0;
@@ -41,7 +42,7 @@ bitsnum (DWORD n)
 	return cnt;
 }
 
-BYTE *
+static BYTE *
 get_r8 (REGS *r, BYTE i)
 {
 	switch (i) {
@@ -57,7 +58,7 @@ get_r8 (REGS *r, BYTE i)
 	}
 }
 
-WORD *
+static WORD *
 get_r16 (REGS *r, BYTE i)
 {
 	switch (i) {
@@ -73,7 +74,7 @@ get_r16 (REGS *r, BYTE i)
 	}
 }
 
-void
+static void
 update_f8 (REGS *r, BYTE dst, BYTE src, WORD res)
 {
 	BYTE res8 = res & 0xFF;
@@ -88,7 +89,7 @@ update_f8 (REGS *r, BYTE dst, BYTE src, WORD res)
 	   &&(dst & 0x80) != (res8 & 0x80))    r->flags |= OF;
 }
 
-void
+static void
 update_f16_incdec (REGS *r, WORD old_v, WORD res, BOOL is_inc)
 {
 	r->flags &= ~(CF | OF | PF | AF | ZF | SF);
@@ -106,7 +107,7 @@ update_f16_incdec (REGS *r, WORD old_v, WORD res, BOOL is_inc)
 	}
 }
 
-void
+static void
 update_f16 (REGS *r, WORD dst, WORD src, DWORD res)
 {
 	r->flags &= ~(CF | OF | PF | AF | ZF | SF);
@@ -121,7 +122,7 @@ update_f16 (REGS *r, WORD dst, WORD src, DWORD res)
 }
 
 int
-init_dos ()
+init_dos (void)
 {
 	MEMORY = calloc(memsz + 1, sizeof(BYTE));
 	handles = malloc((HANDLES_MAX + 1) * sizeof(HANDLE));
@@ -140,7 +141,7 @@ init_dos ()
 	return 0;
 }
 
-memptr_t
+static memptr_t
 calc_ea (REGS *r, BYTE modrm)
 {
 	BYTE mod, rm;
@@ -196,7 +197,7 @@ calc_ea (REGS *r, BYTE modrm)
 	return addr;
 }
 
-void
+static void
 exec_add_r8 (REGS *r)
 {
 	BYTE modrm, mod, reg, rm, *dst, *src, src_val, dst_val;
@@ -233,7 +234,7 @@ exec_add_r8 (REGS *r)
 	}
 }
 
-void
+static void
 exec_mov_r16 (REGS *r)
 {
 	BYTE modrm, mod, reg, rm;
@@ -263,7 +264,7 @@ exec_mov_r16 (REGS *r)
 	}
 }
 
-void
+static void
 exec_mov_r8 (REGS *r)
 {
 	BYTE modrm, mod, reg, rm, *dst, *src;
@@ -291,7 +292,7 @@ exec_mov_r8 (REGS *r)
 	}
 }
 
-void
+static void
 exec_80 (REGS *r)
 {
 	BYTE modrm, mod, reg, rm, val, *r8, imm;
@@ -326,7 +327,7 @@ exec_80 (REGS *r)
 	}
 }
 
-void
+static void
 exec_83 (REGS *r)
 {
 	BYTE modrm, mod, reg, rm;
@@ -363,7 +364,7 @@ exec_83 (REGS *r)
 	}
 }
 
-void
+static void
 exec_f6 (REGS *r)
 {
 	BYTE modrm, mod, reg, rm, val, *r8;
@@ -394,7 +395,7 @@ exec_f6 (REGS *r)
 	}
 }
 
-void
+static void
 exec_ff (REGS *r)
 {
 	BYTE modrm, mod, reg, rm;
@@ -462,7 +463,7 @@ exec_ff (REGS *r)
 }
 
 void
-init_handles ()
+init_handles (void)
 {
 	for (HANDLE i = 0; i < HANDLES_MAX; i++)
 		handles[i] = HANDLE_UNUSED;
@@ -478,7 +479,7 @@ init_handles ()
 }
 
 HANDLE
-new_handle ()
+new_handle (void)
 {
 	int i;
 
@@ -488,7 +489,7 @@ new_handle ()
 	return -1;
 }
 
-void DOS_SYSCALL(0x01)
+static void DOS_SYSCALL(0x01)
 dos_sys_getche INT21 (REGS *r)
 {
 	int c;
@@ -497,14 +498,14 @@ dos_sys_getche INT21 (REGS *r)
 	r->AL = (BYTE)c;
 } 
 
-void DOS_SYSCALL(0x02)
+static void DOS_SYSCALL(0x02)
 dos_sys_putchar INT21 (REGS *r)
 {
 	putchar(r->DL);
 	fflush(stdout);
 }
 
-void DOS_SYSCALL(0x09)
+static void DOS_SYSCALL(0x09)
 dos_sys_print INT21 (REGS *r)
 {
 	memptr_t addr = SEG_OFF(r->DS, r->DX);
@@ -517,7 +518,7 @@ dos_sys_print INT21 (REGS *r)
 	}
 }
 
-void DOS_SYSCALL(0x0A)
+static void DOS_SYSCALL(0x0A)
 dos_sys_read INT21 (REGS *r)
 {
 	memptr_t addr;
@@ -563,6 +564,19 @@ dos_sys_read INT21 (REGS *r)
 
 	MEMORY[SAFE_PLUS(addr, 1)] = bytes_read;
 	r->AL = bytes_read;
+}
+
+static void DOS_SYSCALL(0x24)
+dos_get_sys_time (REGS *r)
+{
+	time_t t;
+	struct tm *local;
+	t = time(NULL);
+	local = localtime(&t);
+	r->CX = local->tm_year;
+	r->DH = local->tm_mon + 1;
+	r->DL = local->tm_mday;
+	r->AL = local->tm_wday;
 }
 
 /*
@@ -622,7 +636,7 @@ dos_sys_readf INT21 (REGS *r)
 }
 */
 
-void DOS_SYSCALL(0x40)
+static void DOS_SYSCALL(0x40)
 dos_sys_write INT21 (REGS *r)
 {
 	memptr_t addr = SEG_OFF(r->DS, r->DX);
@@ -636,14 +650,14 @@ dos_sys_write INT21 (REGS *r)
 		r->AX = n;
 }
 
-void
+static void
 dos_get_bios_tt (REGS *r)
 {
 	r->CX = tickcount >>	16;
 	r->DX = tickcount &	0xFFFF;
 }
 
-void
+static void
 int1ah (REGS *r)
 {
 	switch (r->AH) {
@@ -656,10 +670,11 @@ void
 int21h (REGS *r)
 {
 	switch (r->AH) {
-	case 0x01: dos_sys_getche (r); break;
-	case 0x02: dos_sys_putchar(r); break;
-	case 0x09: dos_sys_print  (r); break;
-	case 0x0A: dos_sys_read   (r); break;
+	case 0x01: dos_sys_getche  (r); break;
+	case 0x02: dos_sys_putchar (r); break;
+	case 0x09: dos_sys_print   (r); break;
+	case 0x0A: dos_sys_read    (r); break;
+	case 0x24: dos_get_sys_time(r); break;
 	/*
 	case 0x3D: dos_sys_open   (r); break;
 	case 0x3E: dos_sys_close  (r); break;
@@ -996,7 +1011,7 @@ runcom (REGS *r, int fd, size_t sz)
 	memset(&MEMORY[PRG_START], 0, memsz - PRG_START);
 }
 
-size_t
+static size_t
 find_label (char *label)
 {
 	size_t i;
@@ -1010,7 +1025,7 @@ find_label (char *label)
 	return (size_t)-1;
 }
 
-bool
+static bool
 label_exists (char *label)
 {
 	size_t i;
@@ -1023,7 +1038,7 @@ label_exists (char *label)
 	return false;
 }
 
-void
+static void
 addlabel (char *label_name, size_t linenum)
 {
 	size_t lbl_line;
@@ -1060,7 +1075,7 @@ addlabel (char *label_name, size_t linenum)
 	if (lbl_line == lbl_cnt) lbl_cnt++;
 }
 
-void
+static void
 init_labels (char **file, size_t lines)
 {
 	char *labeln;

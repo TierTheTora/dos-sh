@@ -60,11 +60,11 @@ extern size_t labels_n, lbl_cnt;
 extern DWORD ticks;
 
 int init_dos
-	();
+	(void);
 void init_handles
-	();
+	(void);
 HANDLE new_handle
-	();
+	(void);
 void int21h
 	(REGS *r);
 void runcom

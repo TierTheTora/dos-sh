@@ -10,7 +10,7 @@
 #include <time.h>
 #include <stdlib.h>
 
-#define YEAR (__DATE__ + 7)
+#define YEAR (&(__DATE__[7]))
 
 #define SRC_LINK	"<https://github.com/TierTheTora/dos-sh.git>"
 #define AUTHOR		"TierTheTora"
@@ -29,7 +29,7 @@ extern bool progend, color_clear;
 extern pthread_t tickthread;
 
 static inline void
-init_term ()
+init_term (void)
 {
 	rl_catch_signals = 0;
 	rl_catch_sigwinch = 0;
@@ -44,7 +44,7 @@ init_term ()
 }
 
 static inline void
-restore_term ()
+restore_term (void)
 {
 	print("\033[0m");
 }
@@ -52,8 +52,8 @@ restore_term ()
 void *tick
 	(void *arg);
 void kill_dos
-	();
+	(void);
 void print_help
-	();
+	(void);
 
 #endif /* MAIN_H */

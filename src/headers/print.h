@@ -30,7 +30,7 @@ void dosify_dir
 void undosify_dir
 	(char *path);
 char *get_path
-	();
+	(void);
 void print_readable_bytes
 	(size_t bytes);
 

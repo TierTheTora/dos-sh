@@ -59,7 +59,7 @@ tick (void *arg)
 }
 
 void
-kill_dos ()
+kill_dos (void)
 {
 	size_t i;
 	progend = true;
@@ -85,7 +85,7 @@ kill_dos ()
 }
 
 void
-print_help ()
+print_help (void)
 {
 	printf("Usage: %s [OPTION]\n"
 	       "DOS-like shell capable of running COM and BAT files.\n"

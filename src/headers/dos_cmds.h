@@ -54,7 +54,7 @@ extern struct vartable *vars;
 extern size_t vars_cnt, vars_max;
 
 int  init_vars
-	();
+	(void);
 void dos_box
 	(char **argv, int argc);
 void dos_call
@@ -64,7 +64,7 @@ void dos_color
 void dos_cd
 	(char **argv, int argc);
 void dos_cls
-	();
+	(void);
 void dos_copy
 	(char **argv, int argc);
 void dos_del
@@ -74,7 +74,7 @@ void dos_dir
 void dos_echo
 	(char **argv, int argc);
 void dos_exit
-	();
+	(void);
 void dos_fc
 	(char **argv, int argc);
 void dos_free
@@ -84,7 +84,7 @@ void dos_help
 void dos_mkdir
 	(char **argv, int argc);
 void dos_pause
-	();
+	(void);
 void dos_rmdir
 	(char **argv, int argc);
 void dos_ren
@@ -96,6 +96,6 @@ void dos_touch
 void dos_type
 	(char **argv, int argc);
 void dos_ver
-	();
+	(void);
 
 #endif /* DOS_CMDS_H */

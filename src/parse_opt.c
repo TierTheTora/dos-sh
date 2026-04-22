@@ -10,7 +10,7 @@
 #include <time.h>
 #include <unistd.h>
 
-char *
+static char *
 get_var_val (const char *varname)
 {
 	size_t i;
@@ -32,10 +32,10 @@ get_var_val (const char *varname)
 	return "";
 }
 
-const char *
+static const char *
 substitute_var (const char *p, char **dest)
 {
-	char varname[256], *varval;
+	char varname[257], *varval;
 	int varlen = 0;
 	p++;
 

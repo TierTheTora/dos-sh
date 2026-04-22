@@ -6,7 +6,7 @@
 #include <sys/select.h>
 
 int
-kbhit ()
+kbhit (void)
 {
 	struct timeval tv;
 	fd_set fds;
@@ -38,7 +38,7 @@ cputs (const char *msg)
 }
 
 int
-getch ()
+getch (void)
 {
 	struct termios old_sett, new_sett;
 	int ch;
@@ -56,7 +56,7 @@ getch ()
 }
 
 int
-getche ()
+getche (void)
 {
 	int ch;
 
@@ -68,7 +68,8 @@ getche ()
 }
 
 void
-clrscr ()
+clrscr (void)
 {
-	write(STDOUT_FILENO, "\033[2J\033[H", 7);
+	if (write(STDOUT_FILENO, "\033[2J\033[H", 7) == -1)
+		perror("write");
 }

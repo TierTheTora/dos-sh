@@ -27,7 +27,7 @@ size_t vars_cnt, vars_max;
 struct vartable *vars;
 
 int
-init_vars ()
+init_vars (void)
 {
 	vars_cnt = 0;
 	vars_max = 256;
@@ -80,7 +80,7 @@ dos_call (char **argv, int argc)
 	exec_noext(argv[0], ext, ext_cnt, X_EXEC_VERBOSE);
 }
 
-int
+static int
 nibble_to_color (char nibble)
 {
 	int nibnum = -1;
@@ -194,7 +194,7 @@ dos_copy (char **argv, int argc)
 	close(fd);
 }
 
-int
+static int
 get_longest_name (char *path)
 {
 	DIR *dir;
@@ -221,7 +221,7 @@ get_longest_name (char *path)
 	return maxlen;
 }
 
-int
+static int
 print_ent_info (char *file, char *d_name, 
                  int *dirs, int *files, size_t *bytes,
 		 int maxlen, int *linesz, bool b, bool w)
@@ -331,7 +331,7 @@ dos_dir (char **argv, int argc)
 		}
 		else {
 			undosify_dir(argv[i]);
-			strncpy(file, argv[i], PATH_MAX + 1);
+			strncpy(file, argv[i], PATH_MAX);
 
 			farg = i;
 			nsa++;
@@ -435,11 +435,13 @@ dos_cd (char **argv, int argc)
 	}
 
 	undosify_dir(argv[argc - 1]);
-	chdir(argv[argc - 1]);
+
+	if (chdir(argv[argc - 1]) == -1)
+		perror("chdir");
 }
 
 void
-dos_cls ()
+dos_cls (void)
 {
 	clrscr();
 }
@@ -497,8 +499,11 @@ dos_echo (char **argv, int argc)
 	for (i = 0; i < argc; i++) {
 		arglen = strlen(argv[i]);
 
-		write(STDOUT_FILENO, argv[i], arglen);
+		if (write(STDOUT_FILENO, argv[i], arglen) == -1) {
+			perror("write");
 
+			return;
+		}
 		if (arglen > 0) putchar(' ');
 
 		fflush(stdout);
@@ -508,7 +513,7 @@ dos_echo (char **argv, int argc)
 }
 
 void
-dos_exit ()
+dos_exit (void)
 {
 	exit(0);
 }
@@ -699,7 +704,7 @@ dos_mkdir (char **argv, int argc)
 }
 
 void
-dos_pause ()
+dos_pause (void)
 {
 	puts(DOSSTR_PKEY);
 	(void)getch();
@@ -750,7 +755,7 @@ dos_ren (char **argv, int argc)
 	undosify_dir(argv[0]);
 	undosify_dir(argv[1]);
 
-	strncpy(src, argv[0], PATH_MAX + 1);
+	strncpy(src, argv[0], PATH_MAX);
 	lastslash = strrchr(src, '/');
 
 	if (lastslash == NULL)
@@ -775,7 +780,7 @@ dos_ren (char **argv, int argc)
 		perror("rename");
 }
 
-bool
+static bool
 var_exists (char *varname)
 {
 	size_t i;
@@ -786,7 +791,7 @@ var_exists (char *varname)
 	return false;
 }
 
-size_t
+static size_t
 get_varidx (char *varname)
 {
 	size_t i;
@@ -927,7 +932,7 @@ dos_type (char **argv, int argc)
 }
 
 void
-dos_ver ()
+dos_ver (void)
 {
 	puts("DOS version " DOS_VERSION);
 }

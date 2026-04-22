@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <ctype.h>
 
-bool
+static bool
 in_set (char c, const char* cs)
 {
 	if (!cs) return isspace((unsigned char)c);
