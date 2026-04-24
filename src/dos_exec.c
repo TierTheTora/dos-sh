@@ -1,4 +1,5 @@
 #include "headers/dos_exec.h"
+#include "headers/dos_const.h"
 #include "headers/main.h"
 #include "headers/conio.h"
 #include "headers/dos_lib.h"
@@ -109,21 +110,19 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 	}
 
 	if (strcasecmp(cmd, "box") == 0)
-		dos_box(argv, argc);
-
+		ERRORLEVEL = dos_box(argv, argc);
 	else if (strcasecmp(cmd, "call") == 0)
-		dos_call(argv, argc);
-
+		ERRORLEVEL = dos_call(argv, argc);
 	else if (strcasecmp(cmd, "cd") == 0)
-		dos_cd(argv, argc);
+		ERRORLEVEL = dos_cd(argv, argc);
 	else if (strcasecmp(cmd, "chdir") == 0)
-		dos_cd(argv, argc);
-
+		ERRORLEVEL = dos_cd(argv, argc);
+	else if (strcasecmp(cmd, "choice") == 0)
+		ERRORLEVEL = dos_choice(argv, argc);
 	else if (strcasecmp(cmd, "cls") == 0) {
-		dos_cls();
+		ERRORLEVEL = dos_cls();
 		return;
 	}
-
 	else if (strcasecmp(cmd, "color") == 0) {
 		dos_color(argv, argc);
 		if (color_clear == true) {
@@ -131,68 +130,49 @@ dos_exec (const char *cmd, char **argv, int argc, bool isbatfile)
 			return;
 		}
 	}
-
 	else if (strcasecmp(cmd, "copy") == 0)
-		dos_copy(argv, argc);
-
+		ERRORLEVEL = dos_copy(argv, argc);
 	else if (strcasecmp(cmd, "del") == 0)
-		dos_del(argv, argc);
+		ERRORLEVEL = dos_del(argv, argc);
 	else if (strcasecmp(cmd, "delete") == 0)
-		dos_del(argv, argc);
-
+		ERRORLEVEL = dos_del(argv, argc);
 	else if (strcasecmp(cmd, "dir") == 0)
-		dos_dir(argv, argc);
-
+		ERRORLEVEL = dos_dir(argv, argc);
 	else if (strcasecmp(cmd, "erase") == 0)
-		dos_del(argv, argc);
-
+		ERRORLEVEL = dos_del(argv, argc);
 	else if (strcasecmp(cmd, "echo") == 0)
-		dos_echo(argv, argc);
-
+		ERRORLEVEL = dos_echo(argv, argc);
 	else if (strcasecmp(cmd, "exit") == 0)
-		dos_exit();
-
+		ERRORLEVEL = dos_exit();
 	else if (strcasecmp(cmd, "fc") == 0)
-		dos_fc(argv, argc);
-
+		ERRORLEVEL = dos_fc(argv, argc);
 	else if (strcasecmp(cmd, "free") == 0)
-		dos_free(argv, argc);
-
+		ERRORLEVEL = dos_free(argv, argc);
 	else if (strcasecmp(cmd, "help") == 0)
-		dos_help(argv, argc);
-
+		ERRORLEVEL = dos_help(argv, argc);
 	else if (strcasecmp(cmd, "mkdir") == 0)
-		dos_mkdir(argv, argc);
+		ERRORLEVEL = dos_mkdir(argv, argc);
 	else if (strcasecmp(cmd, "md") == 0)
-		dos_mkdir(argv, argc);
-
+		ERRORLEVEL = dos_mkdir(argv, argc);
 	else if (strcasecmp(cmd, "pause") == 0)
-		dos_pause();
-
+		ERRORLEVEL = dos_pause();
 	else if (strcasecmp(cmd, "rem") == 0) {}
-
 	else if (strcasecmp(cmd, "rmdir") == 0)
-		dos_rmdir(argv, argc);
+		ERRORLEVEL = dos_rmdir(argv, argc);
 	else if (strcasecmp(cmd, "rd") == 0)
-		dos_rmdir(argv, argc);
-
+		ERRORLEVEL = dos_rmdir(argv, argc);
 	else if (strcasecmp(cmd, "ren") == 0)
-		dos_ren(argv, argc);
+		ERRORLEVEL = dos_ren(argv, argc);
 	else if (strcasecmp(cmd, "set") == 0)
-		dos_set(argv, argc);
-
+		ERRORLEVEL = dos_set(argv, argc);
 	else if (strcasecmp(cmd, "touch") == 0)
-		dos_touch(argv, argc);
-
+		ERRORLEVEL = dos_touch(argv, argc);
 	else if (strcasecmp(cmd, "type") == 0)
-		dos_type(argv, argc);
-
+		ERRORLEVEL = dos_type(argv, argc);
 	else if (strcasecmp(cmd, "ver") == 0)
-		dos_ver();
-
+		ERRORLEVEL = dos_ver();
 	else
-		exec_noext(cmd, ext, ext_cnt, X_EXEC_VERBOSE);
-
+		ERRORLEVEL = exec_noext(cmd, ext, ext_cnt, X_EXEC_VERBOSE);
 	if (echo && !isbatfile)
 		putchar('\n');
 }

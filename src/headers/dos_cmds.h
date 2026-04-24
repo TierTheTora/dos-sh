@@ -53,49 +53,51 @@ extern bool echo;
 extern struct vartable *vars;
 extern size_t vars_cnt, vars_max;
 
-int  init_vars
+int init_vars
 	(void);
-void dos_box
+int dos_box
 	(char **argv, int argc);
-void dos_call
+int dos_call
 	(char **argv, int argc);
-void dos_color
+int dos_choice
 	(char **argv, int argc);
-void dos_cd
+int dos_color
 	(char **argv, int argc);
-void dos_cls
+int dos_cd
+	(char **argv, int argc);
+int dos_cls
 	(void);
-void dos_copy
+int dos_copy
 	(char **argv, int argc);
-void dos_del
+int dos_del
 	(char **argv, int argc);
-void dos_dir
+int dos_dir
 	(char **argv, int argc);
-void dos_echo
+int dos_echo
 	(char **argv, int argc);
-void dos_exit
+int dos_exit
 	(void);
-void dos_fc
+int dos_fc
 	(char **argv, int argc);
-void dos_free
+int dos_free
 	(char **argv, int argc);
-void dos_help
+int dos_help
 	(char **argv, int argc);
-void dos_mkdir
+int dos_mkdir
 	(char **argv, int argc);
-void dos_pause
+int dos_pause
 	(void);
-void dos_rmdir
+int dos_rmdir
 	(char **argv, int argc);
-void dos_ren
+int dos_ren
 	(char **argv, int argc);
-void dos_set
+int dos_set
 	(char **argv, int argc);
-void dos_touch
+int dos_touch
 	(char **argv, int argc);
-void dos_type
+int dos_type
 	(char **argv, int argc);
-void dos_ver
+int dos_ver
 	(void);
 
 #endif /* DOS_CMDS_H */

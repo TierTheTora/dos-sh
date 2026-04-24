@@ -1,5 +1,6 @@
 #include "headers/parse_opt.h"
 #include "headers/dos_cmds.h"
+#include "headers/dos_lib.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -15,7 +16,12 @@ get_var_val (const char *varname)
 {
 	size_t i;
 	static char random[7];
+	static char elevel[4];
 
+	for (i = 0; i < vars_cnt; i++) {
+		if (strcasecmp(vars[i].name, varname) == 0)
+			return vars[i].value;
+	}
 	if (strcasecmp(varname, "random") == 0) {
 		snprintf(	random,
 				sizeof(random),
@@ -25,9 +31,14 @@ get_var_val (const char *varname)
 
 		return random;
 	}
-	for (i = 0; i < vars_cnt; i++) {
-		if (strcasecmp(vars[i].name, varname) == 0)
-			return vars[i].value;
+	else if (strcasecmp(varname, "errorlevel") == 0) {
+		snprintf(	elevel,
+				sizeof(elevel),
+				"%d",
+				ERRORLEVEL % 256
+		);
+
+		return elevel;
 	}
 	return "";
 }

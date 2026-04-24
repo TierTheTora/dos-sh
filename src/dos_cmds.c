@@ -41,7 +41,7 @@ init_vars (void)
 	return 0;
 }
 
-void 
+int 
 dos_box (char **argv, int argc)
 {
 	int i, msgsz, msgidx, j;
@@ -64,9 +64,11 @@ dos_box (char **argv, int argc)
 	msg[msgidx] = 0;
 
 	print_box(msg);
+
+	return 0;
 }
 
-void
+int
 dos_call (char **argv, int argc)
 {
 	const char *ext[] = { ".bat", "" };
@@ -74,10 +76,73 @@ dos_call (char **argv, int argc)
 
 	if (argc < 1) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 
 	exec_noext(argv[0], ext, ext_cnt, X_EXEC_VERBOSE);
+
+	return 0;
+}
+
+int
+dos_choice (char **argv, int argc)
+{
+	int c, i, choices[255], choices_n;
+	bool sensitive = false;
+	choices_n = 2;
+	choices[0] = 'Y';
+	choices[1] = 'N';
+
+	for (i = 0; i < argc; i++) {
+		if (strncasecmp(argv[i], "/c", 2) == 0) {
+			choices_n = 0;
+			argv[i] += 2;
+			
+			while (*argv[i] && choices_n < 255) {
+				choices[choices_n] = *argv[i];
+				choices_n++;
+				argv[i]++;
+			}
+			if (choices_n == 0) choices_n = 2;
+		}
+		else if (strcasecmp(argv[i], "/s") == 0) {
+			sensitive = true;
+		}
+		else {
+			print(argv[i]);
+			putchar(' ');
+		}
+	}
+
+	putchar('[');
+
+	for (i = 0; i < choices_n; i++) {
+		if (!sensitive)
+			choices[i] = toupper(choices[i]);
+		putchar(choices[i]);
+
+		if (i + 1 != choices_n)
+			putchar(',');
+		else
+			putchar(']');
+	}
+
+	putchar('?');
+
+	for (;;) {
+		c = getch();
+
+		for (i = 0; i < choices_n; i++) {
+			if (!sensitive) c = toupper(c);
+			if (choices[i] == c) {
+				putchar(choices[i]);
+
+				return i + 1;
+			}
+		}
+	}
+
+	return 0;
 }
 
 static int
@@ -112,7 +177,7 @@ nibble_to_color (char nibble)
 	return nibnum;
 }
 
-void
+int
 dos_color (char **argv, int argc)
 {
 	/* cant change the whole color of the terminal in linux */
@@ -121,7 +186,7 @@ dos_color (char **argv, int argc)
 	if (argc != 1) {
 		wrong_syntax:
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 	if (strlen(argv[0]) != 2)
 		goto wrong_syntax;
@@ -134,9 +199,11 @@ dos_color (char **argv, int argc)
 
 	printf("\033[38;5;%dm\033[48;5;%dm", n1, n2);
 	fflush(stdout);
+
+	return 0;
 }
 
-void
+int
 dos_copy (char **argv, int argc)
 {
 	char *file, *dest, buffer[256];
@@ -145,7 +212,7 @@ dos_copy (char **argv, int argc)
 
 	if (argc != 2) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 
 	undosify_dir(argv[0]);
@@ -157,7 +224,7 @@ dos_copy (char **argv, int argc)
 
 	if (fd < 0) {
 		perror("open");
-		return;
+		return 1;
 	}
 	
 	lstat(file, &statbuf);
@@ -165,11 +232,11 @@ dos_copy (char **argv, int argc)
 
 	if (access(dest, F_OK) == 0) {
 		puts("File already exists.");
-		return;
+		return 1;
 	}
 	if (access(file, F_OK) != 0) {
 		puts("File does not exist.");
-		return;
+		return 1;
 	}
 
 	creat(dest, mode);
@@ -177,7 +244,7 @@ dos_copy (char **argv, int argc)
 
 	if (dfd < 0) {
 		perror("open");
-		return;
+		return 1;
 	}
 
 	memset(buffer, 0, sizeof(buffer));
@@ -186,12 +253,14 @@ dos_copy (char **argv, int argc)
 	while ((bytes_read = read(fd, buffer, sizeof(buffer))) > 0) {
 		if (write(dfd, buffer, bytes_read) != bytes_read) {
 			perror("write");
-			return;
+			return 1;
 		}
 		memset(buffer, 0, sizeof(buffer));
 	}
 
 	close(fd);
+
+	return 0;
 }
 
 static int
@@ -288,7 +357,7 @@ print_ent_info (char *file, char *d_name,
 	return 0;
 }
 
-void
+int
 dos_dir (char **argv, int argc)
 {
 	/* nsa = non-switch args */
@@ -307,7 +376,7 @@ dos_dir (char **argv, int argc)
 
 	if (getcwd(path, sizeof(path)) == NULL) {
 		perror("getcwd");
-		return;
+		return 1;
 	}
 
 	strcpy(file, path);
@@ -315,7 +384,7 @@ dos_dir (char **argv, int argc)
 	for (i = 0; i < argc; i++) {
 		if (nsa > 1) {
 			puts("Illegal Path.");
-			return;
+			return 1;
 		}
 		if (strcasecmp(argv[i], "/w") == 0)
 			w = true;
@@ -327,7 +396,7 @@ dos_dir (char **argv, int argc)
 			s = true;
 		else if (argv[i][0] == '/') {
 			printf("Illegal switch: %s.\n", argv[i]);
-			return;
+			return 1;
 		}
 		else {
 			undosify_dir(argv[i]);
@@ -341,7 +410,7 @@ dos_dir (char **argv, int argc)
 	
 	if (lstat(file, &statbuf) == -1) {
 		perror("lstat");
-		return;
+		return 1;
 	}
 
 	if (S_ISDIR(statbuf.st_mode))
@@ -352,7 +421,7 @@ dos_dir (char **argv, int argc)
 	if (!b) {
 		if (realpath(file, real) == NULL) {
 			perror("realpath");
-			return;
+			return 1;
 		}
 
 		dosify_dir(real);
@@ -365,20 +434,20 @@ dos_dir (char **argv, int argc)
 					if (print_ent_info(file, ent->d_name,
 						&dirs, &files, &bytes,
 						maxlen, &linesz, b, w) != 0) {
-						return;
+						return 1;
 					}
 				}
 			}
 			else {
 				perror("opendir");
-				return;
+				return 1;
 			}
 
 			closedir(dir);
 
 			if (!b)
 				goto print_info;
-			return;
+			return 1;
 		}
 
 		puts(argv[farg]);
@@ -404,7 +473,7 @@ dos_dir (char **argv, int argc)
 			if (print_ent_info(file, ent->d_name,
 			               &dirs, &files, &bytes,
 			               maxlen, &linesz, b, w) != 0) {
-				return;
+				return 1;
 			}
 		}
 
@@ -412,16 +481,17 @@ dos_dir (char **argv, int argc)
 	}
 	else {
 		perror("opendir");
-		return;
+		return 1;
 	}
 	if (!b) {
 		print_info:
 		printf("\n% 8d File(s)  % 21ld Byte(s).\n", files, bytes);
 		printf("% 8d Dir(s).\n", dirs);
 	}
+	return 0;
 }
 
-void
+int
 dos_cd (char **argv, int argc)
 {
 	char cwd[PATH_MAX];
@@ -431,22 +501,25 @@ dos_cd (char **argv, int argc)
 			dosify_dir(cwd);
 			puts(cwd);
 		}
-		return;
+		return 0;
 	}
 
 	undosify_dir(argv[argc - 1]);
 
 	if (chdir(argv[argc - 1]) == -1)
 		perror("chdir");
+	return 0;
 }
 
-void
+int
 dos_cls (void)
 {
 	clrscr();
+
+	return 0;
 }
 
-void
+int
 dos_del (char **argv, int argc)
 {
 	int i;
@@ -454,7 +527,7 @@ dos_del (char **argv, int argc)
 
 	if (argc < 1) {
 		puts("Illegal Path.");
-		return;
+		return 1;
 	}
 	for (i = 0; i < argc; i++) {
 		undosify_dir(argv[i]);
@@ -465,19 +538,20 @@ dos_del (char **argv, int argc)
 			else {
 				perror("lstat");
 			}
-			return;
+			return 1;
 		}
 		if (S_ISDIR(statbuf.st_mode)) {
-			return;
+			return 1;
 		}
 		if (remove(argv[i]) == -1) {
 			perror("remove");
-			return;
+			return 1;
 		}
 	}
+	return 0;
 }
 
-void
+int
 dos_echo (char **argv, int argc)
 {
 	int i, arglen;
@@ -485,11 +559,11 @@ dos_echo (char **argv, int argc)
 	if (argc == 1) {
 		if (strcasecmp(argv[0], "on") == 0) {
 			echo = true;
-			return;
+			return 0;
 		}
 		else if (strcasecmp(argv[0], "off") == 0) {
 			echo = false;
-			return;
+			return 0;
 		}
 	}
 	else if (argc == 0) {
@@ -502,7 +576,7 @@ dos_echo (char **argv, int argc)
 		if (write(STDOUT_FILENO, argv[i], arglen) == -1) {
 			perror("write");
 
-			return;
+			return 0;
 		}
 		if (arglen > 0) putchar(' ');
 
@@ -510,15 +584,17 @@ dos_echo (char **argv, int argc)
 	}
 
 	putchar('\n');
+
+	return 0;
 }
 
-void
+int
 dos_exit (void)
 {
 	exit(0);
 }
 
-void
+int
 dos_fc (char **argv, int argc)
 {
 	struct stat statbuf;
@@ -531,7 +607,7 @@ dos_fc (char **argv, int argc)
 
 	if (argc != 2) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 2;
 	}
 
 	undosify_dir(argv[0]);
@@ -539,14 +615,14 @@ dos_fc (char **argv, int argc)
 
 	if (lstat(argv[0], &statbuf) != 0) {
 		perror("stat");
-		return;
+		return 2;
 	}
 
 	f1sz = statbuf.st_size;
 
 	if (lstat(argv[1], &statbuf) != 0) {
 		perror("stat");
-		return;
+		return 2;
 	}
 
 	f2sz = statbuf.st_size;
@@ -559,11 +635,11 @@ dos_fc (char **argv, int argc)
 
 	if (f1fd < 0) {
 		perror("open");
-		return;
+		return 2;
 	}
 	if (f2fd < 0) {
 		perror("open");
-		return;
+		return 2;
 	}
 
 	while (read(f1fd, &f1ch, 1) == 1
@@ -584,13 +660,13 @@ dos_fc (char **argv, int argc)
 
 	files_differ:
 		puts("Files are different.");
-		return;
+		return 1;
 	files_equal:
 		puts("Files are identical.");
-		return;
+		return 0;
 }
 
-void
+int
 dos_free (char **argv, int argc)
 {
 	struct statvfs stfs;
@@ -600,7 +676,7 @@ dos_free (char **argv, int argc)
 
 	if (statvfs("/", &stfs) != 0) {
 		perror("statvfs");
-		return;
+		return 1;
 	}
 
 	free_b  = stfs.f_bavail * stfs.f_frsize;
@@ -612,7 +688,7 @@ dos_free (char **argv, int argc)
 			h = true;
 		else {
 			puts("Illegal switch.");
-			return;
+			return 1;
 		}
 	}
 
@@ -624,7 +700,7 @@ dos_free (char **argv, int argc)
 		print_readable_bytes(used_b);
 		print("Free:  ");
 		print_readable_bytes(free_b);
-		return;
+		return 0;
 	}
 
 	printf("\n"
@@ -635,9 +711,11 @@ dos_free (char **argv, int argc)
 	       used_b,
 	       free_b
 	);
+
+	return 0;
 }
 
-void
+int
 dos_help (char **argv, int argc)
 {
 	int i;
@@ -680,37 +758,40 @@ dos_help (char **argv, int argc)
 	if (all == true)
 		puts("More commands coming soon . . ."
 		);
+	return 0;
 }
 
-void
+int
 dos_mkdir (char **argv, int argc)
 {
 	if (argc != 1) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 
 	undosify_dir(argv[0]);
 
 	if (access(argv[0], F_OK) == 0) {
 		puts("Path already exists.");
-		return;
+		return 1;
 	}
-
 	if (mkdir(argv[0], 0755) == -1) {
 		perror("mkdir");
-		return;
+		return 1;
 	}
+	return 0;
 }
 
-void
+int
 dos_pause (void)
 {
 	puts(DOSSTR_PKEY);
 	(void)getch();
+
+	return 0;
 }
 
-void
+int
 dos_rmdir (char **argv, int argc)
 {
 	int i;
@@ -718,7 +799,7 @@ dos_rmdir (char **argv, int argc)
 
 	if (argc < 1) {
 		puts("Illegal Path.");
-		return;
+		return 1;
 	}
 	for (i = 0; i < argc; i++) {
 		undosify_dir(argv[i]);
@@ -729,19 +810,20 @@ dos_rmdir (char **argv, int argc)
 			else {
 				perror("lstat");
 			}
-			return;
+			return 1;
 		}
 		if (!S_ISDIR(statbuf.st_mode)) {
-			return;
+			return 1;
 		}
 		if (remove(argv[i]) == -1) {
 			perror("remove");
-			return;
+			return 1;
 		}
 	}
+	return 0;
 }
 
-void
+int
 dos_ren (char **argv, int argc)
 {
 	char src[PATH_MAX + 1], dir[PATH_MAX + 1],
@@ -749,7 +831,7 @@ dos_ren (char **argv, int argc)
 
 	if (argc != 2) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 
 	undosify_dir(argv[0]);
@@ -769,15 +851,15 @@ dos_ren (char **argv, int argc)
 
 	if (access(dst, F_OK) == 0) {
 		puts("File already exists.");
-		return;
+		return 1;
 	}
 	if (access(argv[0], F_OK) != 0) {
 		puts("File does not exist.");
-		return;
+		return 1;
 	}
-
 	if (rename(argv[0], dst) != 0)
 		perror("rename");
+	return 0;
 }
 
 static bool
@@ -802,7 +884,7 @@ get_varidx (char *varname)
 	return -1;
 }
 
-void
+int
 dos_set (char **argv, int argc)
 {
 	char varname[256], *varptr;
@@ -816,7 +898,7 @@ dos_set (char **argv, int argc)
 		for (i = 0; i < vars_cnt; i++) {
 			printf("%s=%s\n", vars[i].name, vars[i].value);
 		}
-		return;
+		return 0;
 	}
 	while (**argv != '=' && **argv != 0) {
 		varname[varchars++] = **argv;
@@ -824,12 +906,12 @@ dos_set (char **argv, int argc)
 	}
 	if (**argv != '=' || varchars == 0) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 	if (varchars > 255) {
 		puts("SET: variable name exceeds 255 character limit.");
 
-		return;
+		return 1;
 	}
 	
 	varname[varchars] = 0;
@@ -849,7 +931,7 @@ dos_set (char **argv, int argc)
 			if (tmp == NULL) {
 				perror("realloc");
 
-				return;
+				return 1;
 			}
 
 			vars = tmp;
@@ -868,7 +950,7 @@ dos_set (char **argv, int argc)
 	if (vars[varidx].value == NULL) {
 		perror("calloc");
 
-		return;
+		return 1;
 	}
 
 	varptr = vars[varidx].value;
@@ -883,27 +965,31 @@ dos_set (char **argv, int argc)
 	}
 
 	strcpy(vars[varidx].name, varname);
+
+	return 0;
 }
 
-void
+int
 dos_touch (char **argv, int argc)
 {
 	if (argc != 1) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 
 	undosify_dir(argv[0]);
 
 	if (access(argv[0], F_OK) == 0) {
 		puts("File already exists.");
-		return;
+		return 1;
 	}
 	
 	creat(argv[0], 0755);
+
+	return 0;
 }
 
-void
+int
 dos_type (char **argv, int argc)
 {
 	int i, fd;
@@ -911,7 +997,7 @@ dos_type (char **argv, int argc)
 
 	if (argc == 0) {
 		puts(DOSSTR_ILLEGAL_SYN);
-		return;
+		return 1;
 	}
 	for (i = 0; i < argc; i++) {
 		undosify_dir(argv[i]);
@@ -929,10 +1015,13 @@ dos_type (char **argv, int argc)
 		
 		close(fd);
 	}
+	return 0;
 }
 
-void
+int
 dos_ver (void)
 {
 	puts("DOS version " DOS_VERSION);
+
+	return 0;
 }
