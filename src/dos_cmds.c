@@ -726,6 +726,7 @@ dos_help (char **argv, int argc)
 	     "<CALL    > Start a batch file within another batch file.\n"
 	     "<CD      > Displays/changes the current directory.\n"
 	     "<CHDIR   > Displays/changes the current directory.\n"
+	     "<CHOICE  > Waits for a keypress and set errorlevel.\n"
 	     "<CLS     > Clear screen.\n"
 	     "<COLOR   > Set the terminal color.\n"
 	     "<COPY    > Copy file.\n"

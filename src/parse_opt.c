@@ -16,7 +16,7 @@ get_var_val (const char *varname)
 {
 	size_t i;
 	static char random[7];
-	static char elevel[4];
+	static char elevel[5];
 
 	for (i = 0; i < vars_cnt; i++) {
 		if (strcasecmp(vars[i].name, varname) == 0)
